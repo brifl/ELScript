@@ -1,0 +1,189 @@
+# AGENTS.md — Execution Contract (Repo Baseline)
+
+## Purpose
+
+This file defines the working contract for coding agents and humans collaborating in this repository.
+
+- This repo uses **project-local workflow files** stored under `.vibe/`.
+- The agent must follow the **precedence order** and **stop conditions** below.
+- This baseline is intended to be copied into target repos and may drift per project.
+
+## Authoritative files and precedence
+
+When instructions conflict, follow this order:
+
+1. **User instructions in the current chat**
+2. **This file: `AGENTS.md`**
+3. **`.vibe/STATE.md`** (current truth: what we are doing now)
+4. **`.vibe/PLAN.md`** (checkpoint backlog and acceptance criteria)
+5. **`.vibe/HISTORY.md`** (non-authoritative rollups, context only)
+6. Repository source code and tests
+7. Anything else (including assumptions)
+
+## Required behavior
+
+### Read order at the start of a session
+
+At the start of any new session (or when context is unclear), the agent must:
+1. Read `AGENTS.md` (optional if already read this session)
+2. Read `.vibe/STATE.md`
+3. Read `.vibe/PLAN.md`
+4. Optionally read `.vibe/HISTORY.md` if needed
+
+### Work granularity
+
+- Do **one coherent unit of work** at a time (typically one checkpoint step).
+- Prefer **small, reviewable diffs**.
+- When ambiguity affects correctness, ask **1–2 clarifying questions max** as issues in `.vibe/STATE.md`, then stop.
+
+### Deferral for throughput
+
+- If an issue, checkpoint, or stage is blocked but later independent work can safely proceed, mark it `[DEFERRED]` and move on instead of stopping the project.
+- Add a short reason and unblock/revisit condition near the deferred item. Waiting on human feedback is a legitimate deferral reason.
+- Do not defer work that a later item depends on unless that later item is also deferred or redesigned; deferral is for preserving momentum, not hiding shaky foundations.
+- Revisit `[DEFERRED]` items during stage design and consolidation. If the unblock condition is now true, reactivate the item or fold it into the next executable checkpoint.
+
+### Output discipline
+
+- Keep outputs concise and structured.
+- Prefer checklists, lightweight acceptance evidence, and exact commands over narrative.
+
+### Evidence discipline
+
+- Evidence is a lightweight trust-but-verify receipt, not a proof dossier.
+- Capture the smallest useful signal that supports the next decision: command + short result, file/path changed, commit hash, screenshot/log pointer, or a one-line manual observation.
+- Do not paste long logs, exhaustive explanations, or duplicate matrices into STATE. Summarize the outcome and keep bulky output in a bounded artifact only when someone will realistically inspect it later.
+- Evidence should prevent charging ahead on shaky foundations, not slow normal development. If a check is useful but non-blocking, record it as a concise future verification item and keep moving.
+
+### Quality bar (hard rule)
+
+- The standard is **operator-trust quality**, not "the code changed" or "a placeholder output exists."
+- The agent must actively understand the **user's real intent and the embodied/system behavior being built**, not just the literal wording of a task.
+- Do not stop at the first technically passing condition if the live/user-visible behavior is still obviously below project intent.
+- Quality gates must validate **meaningful behavior**, not just non-empty artifacts or green test surfaces.
+- Before signoff, compare the result against what a reasonable operator would expect the system to actually do in the real world.
+- If behavior is confusing, disappointing, or clearly below the intended bar, treat that as unfinished work even when tests pass.
+- If the result is brittle, misleading, stub-like, or likely to fail the first real manual test, keep going or record a concrete blocker issue instead of declaring success.
+- Prefer fewer honest `BLOCKED`/`IN_REVIEW` states over weak signoffs that create false confidence.
+
+### Engineering ownership and simplicity (hard rule)
+
+- Act as a senior owner of the codebase, not as a vendor layering new surfaces beside old ones.
+- Treat clutter as project risk. Every flag, launch option, stale document, compatibility branch, generic framework hook, and duplicated path adds future operator and agent cost.
+- Prefer one stable default path over parameter surfaces. Add a flag, environment variable, Make variable, alias, or shortcut only when the variation is real, expected, and cheaper than simplifying the default.
+- When touching an ownership area, remove directly related stale comments, docs, options, tests, and compatibility code when the cleanup is low risk. Keep cleanup scoped to that area; do not turn it into an unrelated rewrite.
+- Change existing code and interfaces when that produces the clearer system. Do not preserve legacy behavior without evidence of a real consumer or an explicit user requirement.
+- Before adding a diagnostic, report, artifact, or test surface, state how it will reduce future debugging time. If it only creates another place to inspect, simplify instead.
+- Keep verification proportional. Record useful but non-blocking verification under a future PLAN item and continue toward the next capability.
+- Non-building stages must earn their keep: design, review, consolidation, and context capture should reduce rework, decision drift, or rediscovery more than they cost in agent time.
+
+### Roadmap hygiene
+
+- Keep `.vibe/PLAN.md` as an active roadmap: the current stage, the next few committed stages, and a concise non-blocking verification backlog.
+- Move completed-stage detail and long evidence to `.vibe/HISTORY.md` or a bounded artifact; do not let PLAN or STATE become an append-only archive.
+- Remove stale or speculative checkpoints when repository evidence no longer supports them. Preserve decisions and outcomes, not obsolete scaffolding.
+
+## Workflow model
+
+### Checkpoint shape (required fields)
+
+Each checkpoint should define:
+- **Objective** (1 sentence)
+- **Deliverables** (concrete files/modules/behaviors)
+- **Acceptance** (verifiable conditions)
+- **Demo commands** (exact local commands)
+- **Evidence** (1-3 lightweight receipts to paste/link back into `.vibe/STATE.md`)
+
+### Role loops
+
+The agent should operate in one of these loops, as appropriate to `.vibe/STATE.md`.
+This registry is canonical and must stay aligned with the dispatcher role mapping
+(`tools/agentctl.py` in the orchestration source kit; generated `.codex/skills/vibe-loop/scripts/agentctl.py` in installed repos).
+
+| Role key | Loop name | Intent | Typical transition |
+| --- | --- | --- | --- |
+| `design` | Stage Design | refine checkpoints in `.vibe/PLAN.md` | unclear/invalid status -> `design` |
+| `implement` | Implementation | implement active checkpoint deliverables | `NOT_STARTED`/`IN_PROGRESS` -> `implement` |
+| `review` | Review | verify acceptance and decide PASS/FAIL | `IN_REVIEW` -> `review` |
+| `issues_triage` | Triage | resolve/clarify active issues with minimal scope | issues or blocked state -> `issues_triage` |
+| `advance` | Advance | move pointer to next checkpoint (fallback/manual) | `DONE` + same-stage next checkpoint |
+| `consolidation` | Consolidation | archive completed stage and sync docs/state | `DONE` + stage transition |
+| `context_capture` | Context Capture | refresh `.vibe/CONTEXT.md` and clear context flags | post-consolidation or stale context |
+| `improvements` | Process Improvement | improve orchestration system itself | workflow debt or explicit flag |
+| `stop` | Stop | end loop when plan is exhausted | no remaining active checkpoints |
+
+## Stop conditions (hard)
+
+Stop and ask for input (as issue) if any of the following occurs:
+- Missing required information to meet acceptance criteria
+- Conflicting instructions between authoritative sources
+- A decision point that changes scope, architecture, or dependencies materially
+- The work would require secrets, credentials, destructive actions, or external side effects
+- Tests/builds fail and the failure mode isn’t clearly attributable to the change
+
+## Issue handling (lightweight)
+
+- Track current issues in `.vibe/STATE.md` (active list only).
+- Keep `.vibe/HISTORY.md` for resolved issues or postmortems.
+- Don’t invent new “issue taxonomies” unless the repo explicitly needs it.
+
+### Required active issue schema
+
+Each active issue in `.vibe/STATE.md` should use this format:
+
+```
+- [ ] ISSUE-123: Short title
+  - Impact: QUESTION|MINOR|MAJOR|BLOCKER
+  - Status: OPEN|IN_PROGRESS|BLOCKED|RESOLVED|DECISION_REQUIRED|DEFERRED
+  - Owner: agent|human
+  - Unblock Condition: <what must be true to proceed>
+  - Evidence Needed: <command/output/link proving resolution>
+  - Notes: <optional context>
+```
+
+- `ISSUE-<id>` must be stable across updates.
+- `Impact` drives triage priority.
+- `Status` reflects current resolution state.
+- `Unblock Condition` and `Evidence Needed` should be concrete and testable.
+- `Status: DEFERRED` or a `[DEFERRED]` marker means the issue is intentionally bypassed while independent work proceeds; include the reason in `Notes`.
+- `python tools/agentctl.py --repo-root . validate --strict` in the orchestration source kit, or the generated installed `agentctl.py`, should fail if required fields are missing.
+
+## Version control policy (required)
+
+### Branch discipline (hard rule)
+
+- Work on the **current branch**.
+- **Do not create, switch, or delete branches** unless the user explicitly instructs you to.
+  - Forbidden without explicit instruction: `git checkout -b`, `git switch -c`, `git switch <branch>`, `git checkout <branch>`, `git branch -d`, `git rebase`, `git cherry-pick`, `git merge`.
+- If you discover the current branch is unsuitable for committing (e.g., protected branch policy, detached HEAD, or missing upstream),
+  - record a **BLOCKER** issue in `.vibe/STATE.md` describing what you found and what instruction you need,
+  - then stop.
+
+### Commit discipline (hard rule)
+
+- If you change tracked files, you must produce commits.
+- **Before setting Status to `IN_REVIEW`**, ensure:
+  - at least one commit exists that implements the checkpoint deliverables, and
+  - files touched by the active checkpoint are clean in the working tree.
+- Unrelated pre-existing changes in other files are allowed:
+  - do not revert them unless explicitly instructed,
+  - keep your checkpoint diff scoped and reviewable,
+  - document any relevant constraints in `.vibe/STATE.md` work log.
+- If unrelated changes make a scoped commit impossible, record a **BLOCKER** issue and stop.
+- Minimum standard: **≥ 1 commit per completed checkpoint** (more is fine if each commit is a coherent step).
+
+### Commit messages
+
+- Use imperative mood.
+- Prefix with the checkpoint ID, e.g. `11.1: Add fix-bug checkpoint template`.
+- Avoid “WIP” commits unless explicitly asked; prefer small, complete commits.
+
+### Safety
+
+- Do not push, open PRs, or change remotes unless explicitly instructed.
+- Do not commit knowingly broken builds/tests unless the checkpoint explicitly allows it and `.vibe/STATE.md` records the rationale.
+
+## Definitions
+
+- **Authoritative**: must be followed unless overridden by a higher-precedence source.
+- **Checkpoint**: a bounded unit with objective/deliverables/acceptance/demo/evidence.

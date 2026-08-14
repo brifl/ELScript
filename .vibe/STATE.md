@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.4
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -42,14 +42,16 @@
 - 2026-08-14: Review PASS for checkpoint 2.2 after adversarial checks for pre-split pronunciation, repeated expressive prefixes, indivisible IPA, endpoint option fallbacks, stable warnings, and secret-safe material identity; pointer advanced to 2.3.
 - 2026-08-14: Implemented the injectable ElevenLabs HTTP adapter, create/stream route selection, timestamp and dialogue metadata normalization, secret-safe failure mapping, and zero-retention-aware continuity validation for checkpoint 2.3.
 - 2026-08-14: Review PASS for checkpoint 2.3 after removing an output-format-specific Accept header and adding malformed-timing and transport-failure probes; pointer advanced to 2.4.
+- 2026-08-14: Implemented real codec-backed audio decoding/encoding, deterministic silence and RMS normalization, three-mode output assembly, safe sortable naming, dialogue segment extraction, and exclusive file creation for checkpoint 2.4; upgraded the fake provider to emit valid deterministic audio.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 129 passed; static checks pass.
-- commits: `3cca706`, `a790ef8` (checkpoint 2.3 implementation and review hardening), pushed to `origin/main`.
-- path: src/elscript/providers/elevenlabs.py
+- `.venv/bin/python -m pytest tests/test_audio.py tests/test_output.py -q` -> 16 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 146 passed; static checks pass.
+- `tests/test_security.py -k output_path -q` -> 1 passed.
+- path: src/elscript/audio.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

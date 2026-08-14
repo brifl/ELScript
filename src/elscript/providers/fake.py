@@ -4,16 +4,22 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
+import struct
 from collections.abc import Iterator, Mapping
 from typing import Any
 
+from ..audio import PCMBuffer, encode_audio, parse_output_format
 from .base import (
+    CharacterAlignment,
     EndpointCapabilities,
     GenerationChunk,
     GenerationResult,
     ProviderCapabilities,
     ProviderFeature,
     ProviderRequest,
+    RequestKind,
+    VoiceSegmentMetadata,
 )
 
 _FAKE_FEATURES = frozenset(
@@ -105,7 +111,7 @@ def _request_identity(request: ProviderRequest) -> bytes:
 
 
 class FakeProvider:
-    """Records calls and emits stable opaque bytes without external side effects."""
+    """Records calls and emits valid deterministic audio without external effects."""
 
     provider_id = "fake"
 
@@ -125,11 +131,70 @@ class FakeProvider:
     def generate(self, request: ProviderRequest) -> GenerationResult:
         self._requests.append(request)
         digest = hashlib.sha256(_request_identity(request)).hexdigest()
+        spec = parse_output_format(request.output_format)
+        duration_seconds = 0.1 * len(request.parts)
+        sample_count = round(spec.sample_rate * duration_seconds)
+        frequency = 220 + int(digest[:4], 16) % 800
+        pcm = PCMBuffer(
+            b"".join(
+                struct.pack(
+                    "<h",
+                    round(
+                        4_000
+                        * math.sin(
+                            2 * math.pi * frequency * index / spec.sample_rate
+                        )
+                    ),
+                )
+                for index in range(sample_count)
+            ),
+            spec.sample_rate,
+        )
+        audio = encode_audio(pcm, request.output_format)
+        characters: list[str] = []
+        starts: list[float] = []
+        ends: list[float] = []
+        voice_segments: list[VoiceSegmentMetadata] = []
+        character_offset = 0
+        for index, part in enumerate(request.parts):
+            text = part.text or ""
+            part_start = index * 0.1
+            character_duration = 0.1 / max(len(text), 1)
+            characters.extend(text)
+            starts.extend(
+                part_start + character_duration * position
+                for position in range(len(text))
+            )
+            ends.extend(
+                part_start + character_duration * (position + 1)
+                for position in range(len(text))
+            )
+            if request.kind is RequestKind.DIALOGUE:
+                voice_segments.append(
+                    VoiceSegmentMetadata(
+                        voice_id=part.segment.voice_id,
+                        start_seconds=part_start,
+                        end_seconds=part_start + 0.1,
+                        part_index=index,
+                        character_start_index=character_offset,
+                        character_end_index=character_offset + len(text),
+                    )
+                )
+            character_offset += len(text)
+        alignment = (
+            CharacterAlignment(tuple(characters), tuple(starts), tuple(ends))
+            if request.timestamps
+            else None
+        )
         return GenerationResult(
-            audio=f"elscript-fake:{digest}".encode(),
+            audio=audio.data,
             output_format=request.output_format,
             request_id=f"fake-{digest[:16]}",
-            metadata={"deterministic": True},
+            duration_seconds=audio.duration_seconds,
+            alignment=alignment,
+            normalized_alignment=alignment,
+            voice_segments=tuple(voice_segments) if request.timestamps else (),
+            metadata={"deterministic": True, "identity_sha256": digest},
         )
 
     def stream(self, request: ProviderRequest) -> Iterator[GenerationChunk]:

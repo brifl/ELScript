@@ -7,6 +7,7 @@ import pytest
 from elscript.config import resolve_config
 from elscript.errors import AuthenticationError, InputError
 from elscript.loading import load_document
+from elscript.output import sanitize_filename_component
 from elscript.validation import validate_document
 
 
@@ -74,3 +75,17 @@ def test_explicit_provider_options_cannot_smuggle_credentials() -> None:
         )
 
     assert "do-not-leak" not in str(raised.value)
+
+
+def test_output_path_components_cannot_retain_traversal_or_platform_names(
+    tmp_path: Path,
+) -> None:
+    root = tmp_path.resolve()
+    components = ["../../outside", "..\\outside", "/absolute", "CON", "...", "a:b"]
+
+    for component in components:
+        safe = sanitize_filename_component(component)
+        candidate = (root / f"{safe}.wav").resolve(strict=False)
+        assert candidate.parent == root
+        assert "/" not in safe and "\\" not in safe
+        assert safe not in {"", ".", "..", "CON"}

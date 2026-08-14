@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from elscript.audio import decode_audio
 from elscript.compiler import compile_document
 from elscript.config import resolve_config
 from elscript.errors import (
@@ -172,7 +173,10 @@ def test_fake_provider_is_protocol_compatible_deterministic_and_no_network() -> 
     assert isinstance(first_provider, Provider)
     assert first.audio == second.audio
     assert first.request_id == second.request_id
-    assert first.metadata == {"deterministic": True}
+    assert first.metadata["deterministic"] is True
+    assert decode_audio(first.audio, first.output_format).duration_seconds == pytest.approx(
+        0.1 * len(request.parts), abs=0.03
+    )
     assert chunks[0].audio == first.audio
     assert chunks[0].final is True
     assert len(first_provider.requests) == 1

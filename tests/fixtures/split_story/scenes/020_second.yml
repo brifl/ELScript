@@ -1,0 +1,5 @@
+scenes:
+  - id: second
+    order: 20
+    script:
+      - MARA: Second.

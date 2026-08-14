@@ -1,0 +1,5 @@
+scenes:
+  - id: first
+    order: 10
+    script:
+      - MARA: First.

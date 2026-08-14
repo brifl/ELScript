@@ -10,27 +10,27 @@
 ## Current focus
 
 - Stage: 2
-- Checkpoint: 2.2
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 2.3
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Convert resolved semantic intent into validated ElevenLabs text, tags, pronunciation, and endpoint options without silent loss.
+- Execute planned speech/dialogue requests through ElevenLabs normal and timestamp endpoints with stable result and error translation.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/providers/elevenlabs_prompt.py` for versioned semantic-to-provider translation.
-- Exact, boundary-safe pronunciation term substitution and dictionary locator handling.
-- Scoped raw `api` option resolution and model/endpoint validation.
-- Translation and warning tests in `tests/test_elevenlabs_prompt.py`.
+- `src/elscript/providers/elevenlabs.py` implementing capability description, request execution, and metadata extraction.
+- Transport boundary supporting deterministic mocked HTTP/SDK contract tests.
+- Continuity support for context text and request stitching where compatible.
+- Adapter tests in `tests/test_elevenlabs_provider.py` with recorded request/response shapes and no live calls.
 
 ## Acceptance (current checkpoint)
 
-- [x] Eleven v3 emotion, intensity, energy, pace, volume, delivery, cues, and authored tags preserve deterministic authored order.
-- [x] Exact/case-sensitive pronunciation matching avoids substring corruption and v3 IPA compiles to native form.
-- [x] Dictionary limits and raw provider settings are validated for the selected endpoint/model before generation.
-- [x] Unsupported semantic intent yields a stable warning or capability error, never silent omission.
-- [x] Translation version and all material provider inputs are available to render identity.
+- [ ] Speech and dialogue plans select the correct normal or timestamp operation and send every validated material option.
+- [ ] Audio bytes, request IDs, character alignment, normalized alignment, and voice segments are normalized into provider-neutral results.
+- [ ] Authentication, rate-limit, capability/account, and generation failures map to stable ELScript error categories with secrets redacted.
+- [ ] Continuity data is bounded to provider limits and disabled when incompatible with zero-retention behavior.
+- [ ] The automated suite performs no network calls and cannot incur provider charges.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -40,12 +40,13 @@
 - 2026-08-14: Implemented endpoint-specific provider contracts, deterministic request grouping/splitting, pre-generation capability failures, ordered plan events, and a no-network deterministic fake provider for checkpoint 2.1.
 - 2026-08-14: Review PASS for checkpoint 2.1 after applying scene-level chunk ceilings and correcting fake-provider audio identity to include semantic performance but exclude editorial IDs; 87 tests and static gates pass, and the pointer advanced to 2.2.
 - 2026-08-14: Implemented versioned Eleven v3 semantic/audio-tag translation, boundary-safe pronunciation and native IPA, endpoint-scoped raw-option validation, provider request materialization, and pre-split prepared-text planning for checkpoint 2.2.
+- 2026-08-14: Review PASS for checkpoint 2.2 after adversarial checks for pre-split pronunciation, repeated expressive prefixes, indivisible IPA, endpoint option fallbacks, stable warnings, and secret-safe material identity; pointer advanced to 2.3.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_elevenlabs_prompt.py tests/test_pronunciation.py tests/test_planner.py tests/test_capabilities.py -q` -> 46 passed.
+- `.venv/bin/python -m pytest tests/test_elevenlabs_prompt.py tests/test_pronunciation.py -q` -> 27 passed.
 - `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 114 passed; static checks pass.
 - path: src/elscript/providers/elevenlabs_prompt.py
 

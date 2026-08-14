@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.5
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -46,13 +46,14 @@
 - 2026-08-14: Implemented immutable effective configuration, dotenv discovery, five-layer leaf precedence, shared recursive redaction, and secret-safe public/fingerprint serialization for checkpoint 1.4.
 - 2026-08-14: Review PASS for checkpoint 1.4 after adding runtime option type checks, dotenv symlink containment, and explicit empty-seed clearing; full suite/static checks passed and pointer advanced to 1.5.
 - 2026-08-14: Implemented immutable resolved performance, sticky per-character state, structured vocal/event compilation, provider/render overlays, deterministic IDs, and scene/final snapshots for checkpoint 1.5.
+- 2026-08-14: Review PASS for checkpoint 1.5 after isolating semantic preset state, preserving parent directions on state-only structured speech, and hardening explicit-null scene render fallback; full suite/static checks passed and Stage 1 is ready for consolidation.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_compiler.py tests/test_design_examples.py -q` -> 10 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 66 passed; static checks pass.
+- `.venv/bin/python -m pytest tests/test_compiler.py tests/test_design_examples.py -q` -> 12 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 68 passed; static checks pass.
 - path: src/elscript/compiler.py
 
 ## Workflow state

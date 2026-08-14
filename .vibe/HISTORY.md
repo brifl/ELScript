@@ -6,18 +6,18 @@
 - Use it for rollups, resolved issues, and consolidation notes.
 - Prefer links/identifiers rather than copying large blocks.
 
-## Completed checkpoints
-<!-- Append entries as checkpoints complete. -->
-- YYYY-MM-DD — Stage X / Checkpoint X.Y: <title>
-  - Summary: <1–3 bullets>
-  - Evidence pointer: <where evidence lives (commit hash, PR, or pasted output reference)>
+## Completed stages
+
+- 2026-08-14 — Stage 1: Deterministic authoring and compilation core
+  - Shipped the Python package/public contracts and a canonical, source-aware load and merge pipeline for files, directories, YAML text, and mappings.
+  - Added strict ELScript 1.0 schema/reference validation, layered secret-safe configuration, and deterministic compilation of sticky character state into speech and ordered non-speech timeline events.
+  - Review hardening covered safe YAML 1.2 scalar handling, symlink containment, credential redaction, falsey configuration values, structured-speech directions, semantic/provider state isolation, and stable IDs.
+  - Evidence: commits `bab4d35` through `52d9290`; 68 tests, Ruff, and strict mypy passed at consolidation.
 
 ## Resolved issues
 
-- YYYY-MM-DD — ISSUE-001: <title>
-  - Resolution: <1–2 lines>
-  - Notes: <optional>
+- None recorded.
 
 ## Process notes
-<!-- Changes to the orchestration approach, scripts, prompts, etc. -->
-- YYYY-MM-DD: <note>
+
+- 2026-08-14: Stage consolidation keeps acceptance detail in git history while preserving the next executable stage in PLAN and current truth in STATE.

@@ -9,59 +9,48 @@
 
 ## Current focus
 
-- Stage: 1
-- Checkpoint: 1.5
-- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Stage: 2
+- Checkpoint: 2.1
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Compile validated scenes into stable speech segments and ordered non-speech events with fully resolved semantic and provider state.
+- Turn compiled timelines into deterministic provider requests without conflating authored segments, request groups, or output boundaries.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/compiler.py` implementing baselines, scene inheritance, `set`, `with`, `reset`, structured speech, cues, and tags.
-- Deterministic logical ID and global speech-ordinal generation.
-- Provider-neutral timeline models for speech, pause, marker, and note events.
-- State-machine, ordering, and example-based tests in `tests/test_compiler.py`.
+- `src/elscript/providers/base.py` defining provider, capability, generation, metadata, and streaming contracts.
+- `src/elscript/planner.py` implementing `auto`, `speech`, and `dialogue` strategies plus grouping and split rules.
+- A deterministic fake provider used by integration tests without network or charges.
+- Planner/capability tests in `tests/test_planner.py`.
 
 ## Acceptance (current checkpoint)
 
-- [x] Persistent state is isolated per character, resets to the effective baseline, and crosses scenes only when explicitly inherited.
-- [x] Utterance- and segment-level temporary state observes the documented precedence and never mutates persistent state.
-- [x] Structured `say` preserves state-only commands and authored vocal ordering, including cue-only segments.
-- [x] Notes are never vocalized; pauses and markers remain ordered timeline events and do not consume speech ordinals.
-- [x] Generated IDs and global ordinals are deterministic, while explicit IDs remain unchanged.
-- [x] The comprehensive example compiles to an inspectable timeline with expected final character states.
+- [ ] Planning honors scene boundaries, explicit pauses, model/settings/dictionary compatibility, output mode, and streaming mode.
+- [ ] Dialogue groups never exceed configured/provider character or unique-voice limits and preserve speaker/segment identity.
+- [ ] A logical segment split for provider limits retains ordered subparts under one logical ID.
+- [ ] Unsupported requested capabilities fail before generation unless an explicit coded degradation policy applies.
+- [ ] Identical inputs produce structurally identical plans.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
 
-- 2026-08-14: Replaced the placeholder roadmap with three implementation stages derived from `DESIGN.md` and aligned the active pointer to checkpoint 1.1.
-- 2026-08-14: Implemented Python 3.11+ packaging, immutable boundary models, the documented error hierarchy, public API signatures, CLI help, and contract tests; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
-- 2026-08-14: Review PASS for checkpoint 1.1; verified the built wheel in a fresh environment, reran tests/lint/types, probed source ambiguity and nested redaction, and auto-advanced to 1.2.
-- 2026-08-14: Implemented safe YAML/file/directory/mapping loading, provenance, deterministic discovery/order, section-aware merging, conflict diagnostics, and split-project fixtures for checkpoint 1.2.
-- 2026-08-14: Review PASS for checkpoint 1.2 after fixing appended-list provenance, rerunning the full suite/static checks, and rejecting an external-source symlink probe; auto-advanced to 1.3.
-- 2026-08-14: Implemented strict ELScript 1.0 structural models, source-aware schema diagnostics, credential checks, and character/preset/ID reference validation for checkpoint 1.3.
-- 2026-08-14: Review PASS for checkpoint 1.3 after adding YAML 1.2 boolean resolution, reserved event-name validation, and credential suffix coverage; full suite/static checks passed and pointer advanced to 1.4.
-- 2026-08-14: Implemented immutable effective configuration, dotenv discovery, five-layer leaf precedence, shared recursive redaction, and secret-safe public/fingerprint serialization for checkpoint 1.4.
-- 2026-08-14: Review PASS for checkpoint 1.4 after adding runtime option type checks, dotenv symlink containment, and explicit empty-seed clearing; full suite/static checks passed and pointer advanced to 1.5.
-- 2026-08-14: Implemented immutable resolved performance, sticky per-character state, structured vocal/event compilation, provider/render overlays, deterministic IDs, and scene/final snapshots for checkpoint 1.5.
-- 2026-08-14: Review PASS for checkpoint 1.5 after isolating semantic preset state, preserving parent directions on state-only structured speech, and hardening explicit-null scene render fallback; full suite/static checks passed and Stage 1 is ready for consolidation.
+- 2026-08-14: Consolidated completed Stage 1 into `.vibe/HISTORY.md`; the canonical load-to-compile front half passes 68 tests plus Ruff and strict mypy.
+- 2026-08-14: Advanced to checkpoint 2.1 for provider capability contracts and deterministic render planning; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_compiler.py tests/test_design_examples.py -q` -> 12 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 68 passed; static checks pass.
-- path: src/elscript/compiler.py
+- `python3 .codex/skills/vibe-loop/scripts/agentctl.py --repo-root . validate --format json` -> valid at Stage 2 / checkpoint 2.1.
+- path: .vibe/HISTORY.md
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
-- [ ] RUN_CONTEXT_CAPTURE
-- [x] STAGE_DESIGNED
-- [x] MAINTENANCE_CYCLE_DONE
-- [x] RETROSPECTIVE_DONE
+- [x] RUN_CONTEXT_CAPTURE
+- [ ] STAGE_DESIGNED
+- [ ] MAINTENANCE_CYCLE_DONE
+- [ ] RETROSPECTIVE_DONE
 - [x] PROCESS_IMPROVEMENTS_DONE
 
 ## Active issues

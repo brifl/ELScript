@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.4
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -52,6 +52,7 @@
 - `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 146 passed; static checks pass.
 - `tests/test_security.py -k output_path -q` -> 1 passed.
 - path: src/elscript/audio.py
+- commit: `606c0d6` (`2.4: Assemble and write safe audio outputs`), pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

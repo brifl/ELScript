@@ -75,6 +75,15 @@ class OutputWriteResult:
     normalization: str | None
 
 
+@dataclass(frozen=True, slots=True)
+class OutputPreflight:
+    """Resolved collision-free output paths checked before provider generation."""
+
+    root: Path
+    targets: tuple[OutputTarget, ...]
+    paths: tuple[Path, ...]
+
+
 def sanitize_filename_component(
     value: str,
     *,
@@ -144,11 +153,7 @@ def build_output_targets(
     extension = format_extension(output_format)
     targets: tuple[OutputTarget, ...]
     if output_mode == "single":
-        targets = (
-            OutputTarget(
-                f"{sanitize_filename_component(compiled.script_id)}.{extension}"
-            ),
-        )
+        targets = (OutputTarget(f"{sanitize_filename_component(compiled.script_id)}.{extension}"),)
     elif output_mode == "scene":
         targets = tuple(
             OutputTarget(
@@ -411,6 +416,25 @@ def _write_all(paths: Sequence[Path], payloads: Sequence[bytes]) -> None:
         raise WriteError("Audio outputs could not be written") from error
 
 
+def preflight_render_outputs(
+    compiled: CompiledScript,
+    plan: RenderPlan,
+    output_dir: str | os.PathLike[str],
+    *,
+    output_format: str,
+) -> OutputPreflight:
+    """Create the output directory and reject collisions before chargeable work."""
+
+    if plan.output_mode not in {"single", "scene", "segment"}:
+        raise WriteError(f"Unknown render plan output mode {plan.output_mode!r}")
+    targets = build_output_targets(compiled, plan.output_mode, output_format)
+    root = _prepare_output_directory(
+        output_dir,
+        audio_extension=format_extension(output_format),
+    )
+    return OutputPreflight(root, targets, _target_paths(root, targets))
+
+
 def write_render_outputs(
     compiled: CompiledScript,
     plan: RenderPlan,
@@ -422,24 +446,22 @@ def write_render_outputs(
 ) -> OutputWriteResult:
     """Assemble and exclusively create every audio output for one render plan."""
 
-    if plan.output_mode not in {"single", "scene", "segment"}:
-        raise WriteError(f"Unknown render plan output mode {plan.output_mode!r}")
     _validate_results(plan, results)
-    targets = build_output_targets(compiled, plan.output_mode, output_format)
-    root = _prepare_output_directory(
+    preflight = preflight_render_outputs(
+        compiled,
+        plan,
         output_dir,
-        audio_extension=format_extension(output_format),
+        output_format=output_format,
     )
-    paths = _target_paths(root, targets)
     assembled = _assemble_targets(
         compiled,
         plan,
         results,
-        targets,
+        preflight.targets,
         output_format,
         normalize_loudness=normalize_loudness,
     )
-    _write_all(paths, tuple(item.data for item in assembled))
+    _write_all(preflight.paths, tuple(item.data for item in assembled))
     artifacts = tuple(
         WrittenAudio(
             path=path,
@@ -449,11 +471,16 @@ def write_render_outputs(
             ordinal=target.ordinal,
             speaker=target.speaker,
         )
-        for path, target, audio in zip(paths, targets, assembled, strict=True)
+        for path, target, audio in zip(
+            preflight.paths,
+            preflight.targets,
+            assembled,
+            strict=True,
+        )
     )
     normalization = assembled[0].normalization if assembled else None
     return OutputWriteResult(
-        files=paths,
+        files=preflight.paths,
         artifacts=artifacts,
         output_mode=plan.output_mode,
         output_format=output_format,

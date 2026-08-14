@@ -1,0 +1,121 @@
+scenes:
+  - id: station
+    order: 10
+    title: "The Station"
+    context: >
+      Ellis is repairing an abandoned research station.
+      Calypso is the station AI.
+    inherit_character_state: false
+    script:
+      - NARRATOR: >
+          At 2:17 in the morning, the station spoke for the first time
+          in eleven years.
+      - pause: 0.7
+      - CALYPSO:
+          cue: [soft inhale]
+          say: Ellis.
+      - ELLIS:
+          set:
+            emotion: startled
+            intensity: 0.65
+            energy: 0.70
+          say: Jesus!
+      - ELLIS:
+          set:
+            intensity: 0.45
+          say: Calypso? You said voice synthesis was offline.
+      - CALYPSO: It was.
+      - ELLIS:
+          set:
+            emotion: suspicious
+            pace: slow
+          say: Was?
+      - CALYPSO:
+          set:
+            emotion: concerned
+            intensity: 0.30
+          say:
+            - text: I restored the subsystem because I require your attention.
+            - cue: short pause
+            - with:
+                volume: quiet
+                delivery: [carefully]
+              text: Immediately.
+      - ELLIS:
+          cue: [sighs]
+          set:
+            emotion: irritated
+            intensity: 0.45
+          say: It's two in the morning.
+      - CALYPSO: Two seventeen.
+      - ELLIS:
+          tags: [sarcastic]
+          say: Thank you, Calypso.
+      - CALYPSO:
+          with:
+            emotion: curious
+          say: Was that sarcasm?
+      - ELLIS: "Yes."
+      - CALYPSO: Understood.
+      - pause: 0.4
+      - CALYPSO:
+          set:
+            emotion: concerned
+            intensity: 0.50
+          say: The seismic array has detected a repeating signal.
+      - ELLIS:
+          reset: pace
+          set:
+            emotion: confused
+          say: A seismic signal?
+      - CALYPSO: "No."
+      - CALYPSO:
+          set:
+            intensity: 0.65
+          say:
+            - text: A radio signal.
+            - cue: long pause
+            - with:
+                volume: quiet
+              text: From beneath the station.
+      - pause: 1.0
+      - ELLIS:
+          set:
+            emotion: uneasy
+            intensity: 0.60
+            pace: slow
+          say: That's impossible.
+      - CALYPSO:
+          with:
+            delivery: [very gently]
+          say: I know.
+      - ELLIS:
+          say:
+            - text: How far beneath us?
+            - set:
+                emotion: frightened
+                intensity: 0.72
+            - cue: nervous breath
+            - with:
+                volume: quiet
+              text: Calypso... how far?
+      - CALYPSO:
+          set:
+            emotion: apprehensive
+            intensity: 0.55
+          say: Four meters.
+      - marker: reveal
+      - pause: 1.4
+      - NARRATOR:
+          set:
+            emotion: ominous
+            intensity: 0.50
+          say: Ellis looked down at the concrete floor.
+      - ELLIS:
+          with:
+            volume: whisper
+          say: There's no basement.
+      - CALYPSO:
+          cue: [softly]
+          say: I am aware.
+      - note: End of demonstration scene.

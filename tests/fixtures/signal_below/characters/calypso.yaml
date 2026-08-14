@@ -1,0 +1,8 @@
+characters:
+  CALYPSO:
+    voice_id: VOICE_CALYPSO
+    preset: machine
+    model: eleven_v3
+    defaults:
+      emotion: neutral
+      delivery: [precise, calm]

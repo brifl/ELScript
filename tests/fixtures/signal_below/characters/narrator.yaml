@@ -1,0 +1,4 @@
+characters:
+  NARRATOR:
+    voice_id: VOICE_NARRATOR
+    preset: narrator

@@ -1,0 +1,7 @@
+characters:
+  ELLIS:
+    voice_id: VOICE_ELLIS
+    preset: human
+    defaults:
+      emotion: tired
+      intensity: 0.35

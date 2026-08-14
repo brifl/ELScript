@@ -1,0 +1,43 @@
+elscript: "1.0"
+
+meta:
+  id: signal-below
+  title: "The Signal Below"
+  description: "ELScript feature demonstration"
+  language: en
+  tags: [demo, science-fiction]
+
+render:
+  provider: fake
+  mode: auto
+  model: eleven_v3
+  output_format: wav_16000
+  timestamps: true
+  seed: 771943
+  text_normalization: auto
+  language_text_normalization: false
+  enable_logging: true
+  chunking:
+    max_chars: 1800
+    prefer_scene_boundaries: true
+    prefer_utterance_boundaries: true
+    preserve_continuity: true
+
+pronunciation:
+  terms:
+    Calypso:
+      ipa: "kəˈlɪpsoʊ"
+    XJ-9:
+      say_as: "X J Nine"
+
+export:
+  mode: single
+  normalize_loudness: false
+  manifest:
+    enabled: true
+    include_source_text: true
+  metadata:
+    save_request_ids: true
+    save_voice_segments: true
+    save_character_timestamps: true
+    save_normalized_timestamps: true

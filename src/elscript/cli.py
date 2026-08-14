@@ -3,11 +3,12 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from collections.abc import Sequence
 from pathlib import Path
 
 from .api import render
-from .domain import OutputMode, RenderOptions
+from .domain import Diagnostic, OutputMode, RenderOptions
 from .errors import ELScriptError
 
 
@@ -32,6 +33,27 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def _diagnostic_location(diagnostic: Diagnostic) -> str:
+    if diagnostic.location is None:
+        return ""
+    location = diagnostic.location.source
+    if diagnostic.location.yaml_path:
+        location = f"{location}:{diagnostic.location.yaml_path}"
+    return f" at {location}"
+
+
+def _error_line(error: ELScriptError) -> str:
+    phase = f" [{error.phase.value}]" if error.phase is not None else ""
+    return f"elscript: error{phase}: {error}\n"
+
+
+def _warning_line(diagnostic: Diagnostic) -> str:
+    return (
+        f"elscript: warning [{diagnostic.phase.value}/{diagnostic.code}]: "
+        f"{diagnostic.message}{_diagnostic_location(diagnostic)}"
+    )
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -49,9 +71,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             options=options,
             env_file=args.env_file,
         )
-    except (ELScriptError, NotImplementedError) as error:
-        parser.exit(1, f"elscript: error: {error}\n")
+    except ELScriptError as error:
+        parser.exit(1, _error_line(error))
 
+    for warning in result.warnings:
+        print(_warning_line(warning), file=sys.stderr)
     for output_file in result.files:
         print(output_file)
     if result.manifest_path is not None:

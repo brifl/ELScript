@@ -982,13 +982,7 @@ def write_manifest(
 ) -> Path:
     """Exclusively write a deterministic UTF-8 JSON manifest beside audio files."""
 
-    root = Path(output_dir).resolve()
-    if not root.is_dir():
-        raise WriteError("Manifest output directory does not exist")
-    filename = f"{sanitize_filename_component(manifest.script_id)}.manifest.json"
-    path = root / filename
-    if path.resolve(strict=False).parent != root:
-        raise WriteError("Resolved manifest path escaped the output directory")
+    path = preflight_manifest_output(manifest.script_id, output_dir)
     payload = f"{manifest.to_json()}\n"
     created = False
     try:
@@ -1005,4 +999,24 @@ def write_manifest(
             with suppress(OSError):
                 path.unlink()
         raise WriteError("Manifest could not be written") from error
+    return path
+
+
+def preflight_manifest_output(
+    script_id: str,
+    output_dir: str | os.PathLike[str],
+) -> Path:
+    """Resolve a contained manifest path and reject an existing destination."""
+
+    root = Path(output_dir).resolve()
+    if not root.is_dir():
+        raise WriteError("Manifest output directory does not exist")
+    path = root / f"{sanitize_filename_component(script_id)}.manifest.json"
+    if path.resolve(strict=False).parent != root:
+        raise WriteError("Resolved manifest path escaped the output directory")
+    if path.exists() or path.is_symlink():
+        raise WriteError(
+            "Refusing to overwrite an existing manifest",
+            context={"path": str(path)},
+        )
     return path

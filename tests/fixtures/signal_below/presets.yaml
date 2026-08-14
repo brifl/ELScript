@@ -1,0 +1,21 @@
+presets:
+  narrator:
+    emotion: neutral
+    intensity: 0.25
+    energy: 0.30
+    pace: measured
+    volume: normal
+    delivery: [cinematic, restrained]
+  human:
+    emotion: neutral
+    intensity: 0.40
+    energy: 0.50
+    pace: normal
+    volume: normal
+  machine:
+    emotion: neutral
+    intensity: 0.15
+    energy: 0.30
+    pace: measured
+    volume: normal
+    delivery: [precise, calm, understated]

@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.6
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -48,14 +48,15 @@
 - 2026-08-14: Implemented versioned privacy-aware manifests for every file mode, global/file-relative timeline translation, alignment and dialogue attribution, configurable metadata retention, credential-value scrubbing, and exclusive manifest writes for checkpoint 2.5.
 - 2026-08-14: Review PASS for checkpoint 2.5 after verifying cumulative alignment offsets for a logical segment split across three requests and rejecting dialogue metadata that reverses authored input order; pointer advanced to 2.6.
 - 2026-08-14: Implemented the canonical file-render pipeline and thin CLI, provider selection and warning collection, pre-generation destination checks, partial-output rollback, structured `RenderResult` mapping, and equivalent comprehensive single/split fixtures for checkpoint 2.6.
+- 2026-08-14: Review PASS for checkpoint 2.6 after a no-network production-branch probe verified ElevenLabs semantic preparation and warning propagation through both `RenderResult` and the manifest; Stage 2 is complete.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_render_integration.py tests/test_cli.py -q` -> 13 passed; four source forms, three output modes, result contracts, CLI overrides/errors, preflight, and rollback covered.
+- `.venv/bin/python -m pytest tests/test_render_integration.py tests/test_cli.py -q` -> 14 passed; four source forms, both provider branches, three output modes, result contracts, CLI overrides/errors, preflight, and rollback covered.
 - `.venv/bin/elscript tests/fixtures/signal_below --output build/demo-audio --mode segment` -> 30 decodable WAV assets plus `signal-below.manifest.json`.
-- full suite -> 170 passed; Ruff and strict `mypy src` pass; commit `cbe0ef7` pushed to `origin/main`.
+- full suite -> 171 passed; Ruff and strict `mypy src` pass; commits `cbe0ef7`, `8b9f064` pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

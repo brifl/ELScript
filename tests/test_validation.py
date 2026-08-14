@@ -89,3 +89,19 @@ def test_api_escape_hatch_preserves_options_but_rejects_credentials() -> None:
     assert raised.value.location is not None
     assert raised.value.location.yaml_path == "$.characters.MARA.api.api_key"
     assert "must-not-live-in-yaml" not in str(raised.value)
+
+
+def test_character_ids_cannot_shadow_timeline_events() -> None:
+    loaded = load_document(
+        document={
+            "elscript": "1.0",
+            "characters": {"pause": {"voice_id": "voice"}},
+            "scenes": [],
+        }
+    )
+
+    with pytest.raises(ValidationError, match="reserved") as raised:
+        validate_document(loaded)
+
+    assert raised.value.location is not None
+    assert raised.value.location.yaml_path == "$.characters.pause"

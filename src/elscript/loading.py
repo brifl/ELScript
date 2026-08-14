@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from copy import deepcopy
 from pathlib import Path
@@ -36,6 +37,24 @@ _IGNORED_DIRECTORY_NAMES = frozenset(
         "venv",
     }
 )
+
+
+class _ELScriptSafeLoader(yaml.SafeLoader):
+    """Safe loader with YAML 1.2 boolean semantics for author-facing values."""
+
+
+_ELScriptSafeLoader.yaml_implicit_resolvers = {
+    key: list(resolvers) for key, resolvers in yaml.SafeLoader.yaml_implicit_resolvers.items()
+}
+for resolver_key, resolvers in _ELScriptSafeLoader.yaml_implicit_resolvers.items():
+    _ELScriptSafeLoader.yaml_implicit_resolvers[resolver_key] = [
+        resolver for resolver in resolvers if resolver[0] != "tag:yaml.org,2002:bool"
+    ]
+_BOOLEAN_PATTERN = re.compile(r"^(?:true|True|TRUE|false|False|FALSE)$")
+for first_character in "tTfF":
+    _ELScriptSafeLoader.yaml_implicit_resolvers.setdefault(first_character, []).append(
+        ("tag:yaml.org,2002:bool", _BOOLEAN_PATTERN)
+    )
 
 
 def _yaml_path(parent: str, key: object) -> str:
@@ -74,7 +93,7 @@ def _collect_provenance(
 
 def _parse_yaml(yaml_text: str, *, source_name: str) -> LoadedDocument:
     try:
-        parsed = yaml.safe_load(yaml_text)
+        parsed = yaml.load(yaml_text, Loader=_ELScriptSafeLoader)
     except yaml.YAMLError as error:
         mark = getattr(error, "problem_mark", None)
         location = SourceLocation(

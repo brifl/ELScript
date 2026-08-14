@@ -47,6 +47,23 @@ def test_scalar_and_structured_script_forms_validate() -> None:
     )
 
 
+@pytest.mark.parametrize("value", ["on", "off"])
+def test_unquoted_text_normalization_uses_yaml_1_2_string_semantics(value: str) -> None:
+    loaded = load_document(
+        yaml_text=f"""
+elscript: "1.0"
+render:
+  text_normalization: {value}
+characters: {{}}
+scenes: []
+"""
+    )
+
+    validated = validate_document(loaded)
+
+    assert validated.render.text_normalization == value
+
+
 @pytest.mark.parametrize(
     ("mutation", "expected_path"),
     [

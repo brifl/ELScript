@@ -27,6 +27,14 @@ _SENSITIVE_KEYS = frozenset(
 _EVENT_KEYS = frozenset({"pause", "note", "marker"})
 
 
+def _is_sensitive_key(key: str) -> bool:
+    return (
+        key in _SENSITIVE_KEYS
+        or key.startswith("authorization_")
+        or key.endswith(("_api_key", "_password", "_secret", "_token"))
+    )
+
+
 def _yaml_path(parts: Sequence[object]) -> str:
     path = "$"
     for part in parts:
@@ -68,7 +76,7 @@ def _reject_credentials_in_api(
             child_path = f"{path}.{key}"
             key_text = str(key).casefold().replace("-", "_")
             child_inside_api = inside_api or key == "api"
-            if child_inside_api and key_text in _SENSITIVE_KEYS:
+            if child_inside_api and _is_sensitive_key(key_text):
                 raise ValidationError(
                     "Credentials are not permitted in ELScript api mappings",
                     location=_nearest_location(document, child_path),
@@ -109,6 +117,14 @@ def _validate_references(document: LoadedDocument, schema: ELScriptDocument) -> 
     explicit_ids: dict[str, SourceLocation] = {}
 
     for character_id, character in schema.characters.items():
+        if character_id in _EVENT_KEYS:
+            path = f"$.characters.{character_id}"
+            raise ValidationError(
+                f"Character id {character_id!r} is reserved for a timeline event",
+                phase=PipelinePhase.REFERENCE_VALIDATION,
+                location=_nearest_location(document, path),
+                context={"path": path, "character_id": character_id},
+            )
         if character.preset is not None and character.preset not in schema.presets:
             path = f"$.characters.{character_id}.preset"
             raise UnknownPresetError(

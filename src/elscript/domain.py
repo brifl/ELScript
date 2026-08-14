@@ -62,7 +62,9 @@ class RenderOptions:
     """Explicit caller overrides; ``None`` means the layer supplied no value."""
 
     provider: str | None = None
+    render_mode: str | None = None
     model: str | None = None
+    language: str | None = None
     output_format: str | None = None
     output_mode: OutputMode | str | None = None
     seed: int | None = None
@@ -70,6 +72,11 @@ class RenderOptions:
     text_normalization: str | None = None
     language_text_normalization: bool | None = None
     enable_logging: bool | None = None
+    normalize_loudness: bool | None = None
+    manifest_enabled: bool | None = None
+    include_source_text: bool | None = None
+    chunking: Mapping[str, Any] | None = None
+    api: Mapping[str, Any] | None = None
 
 
 @dataclass(frozen=True, slots=True)

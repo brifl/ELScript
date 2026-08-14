@@ -6,25 +6,7 @@ from collections.abc import Mapping
 from typing import Any, ClassVar
 
 from .domain import PipelinePhase, SourceLocation
-
-_REDACTED = "<redacted>"
-_SENSITIVE_KEY_PARTS = ("api_key", "authorization", "credential", "password", "secret", "token")
-
-
-def _redact_context(value: Any, key: str = "") -> Any:
-    normalized_key = key.casefold().replace("-", "_")
-    if any(part in normalized_key for part in _SENSITIVE_KEY_PARTS):
-        return _REDACTED
-    if isinstance(value, Mapping):
-        return {
-            str(item_key): _redact_context(item, str(item_key))
-            for item_key, item in value.items()
-        }
-    if isinstance(value, tuple):
-        return tuple(_redact_context(item) for item in value)
-    if isinstance(value, list):
-        return [_redact_context(item) for item in value]
-    return value
+from .redaction import redact
 
 
 class ELScriptError(Exception):
@@ -47,7 +29,7 @@ class ELScriptError(Exception):
         self.code = code or self.default_code
         self.phase = phase or self.default_phase
         self.location = location
-        self.context = _redact_context(context or {})
+        self.context = redact(context or {})
 
     def __str__(self) -> str:
         parts = [f"{self.code}: {self.message}"]

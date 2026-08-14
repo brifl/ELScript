@@ -9,30 +9,10 @@ from pydantic import ValidationError as PydanticValidationError
 
 from .domain import LoadedDocument, PipelinePhase, SourceLocation
 from .errors import UnknownCharacterError, UnknownPresetError, ValidationError
+from .redaction import is_sensitive_key
 from .schema import ELScriptDocument
 
-_SENSITIVE_KEYS = frozenset(
-    {
-        "access_token",
-        "api_key",
-        "authorization",
-        "credential",
-        "credentials",
-        "password",
-        "refresh_token",
-        "secret",
-        "token",
-    }
-)
 _EVENT_KEYS = frozenset({"pause", "note", "marker"})
-
-
-def _is_sensitive_key(key: str) -> bool:
-    return (
-        key in _SENSITIVE_KEYS
-        or key.startswith("authorization_")
-        or key.endswith(("_api_key", "_password", "_secret", "_token"))
-    )
 
 
 def _yaml_path(parts: Sequence[object]) -> str:
@@ -76,7 +56,7 @@ def _reject_credentials_in_api(
             child_path = f"{path}.{key}"
             key_text = str(key).casefold().replace("-", "_")
             child_inside_api = inside_api or key == "api"
-            if child_inside_api and _is_sensitive_key(key_text):
+            if child_inside_api and is_sensitive_key(key_text):
                 raise ValidationError(
                     "Credentials are not permitted in ELScript api mappings",
                     location=_nearest_location(document, child_path),

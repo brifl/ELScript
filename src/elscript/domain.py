@@ -144,6 +144,17 @@ class LoadedDocument:
 
 
 @dataclass(frozen=True, slots=True)
+class ResolvedPerformance:
+    emotion: str
+    intensity: float
+    energy: float
+    pace: str
+    volume: str
+    delivery: tuple[str, ...]
+    accent: str | None
+
+
+@dataclass(frozen=True, slots=True)
 class SpeechSegment:
     """Smallest authored vocal unit with one resolved state."""
 
@@ -151,16 +162,56 @@ class SpeechSegment:
     scene_id: str
     ordinal: int
     speaker: str
+    voice_id: str
+    model: str
+    language: str | None
     text: str | None
-    performance: Mapping[str, Any]
+    performance: ResolvedPerformance
     provider_options: Mapping[str, Any] = field(default_factory=dict)
+    render_settings: Mapping[str, Any] = field(default_factory=dict)
     cues: tuple[str, ...] = ()
     tags: tuple[str, ...] = ()
+    entry_id: str | None = None
 
 
 @dataclass(frozen=True, slots=True)
-class TimelineEvent:
-    type: str
+class PauseEvent:
     scene_id: str
+    duration_seconds: float
     after_ordinal: int
-    value: str | float | None = None
+
+
+@dataclass(frozen=True, slots=True)
+class MarkerEvent:
+    scene_id: str
+    name: str
+    after_ordinal: int
+
+
+@dataclass(frozen=True, slots=True)
+class NoteEvent:
+    scene_id: str
+    text: str
+    after_ordinal: int
+
+
+TimelineItem = SpeechSegment | PauseEvent | MarkerEvent | NoteEvent
+
+
+@dataclass(frozen=True, slots=True)
+class CompiledScene:
+    id: str
+    title: str | None
+    context: str | None
+    events: tuple[TimelineItem, ...]
+    initial_character_states: Mapping[str, ResolvedPerformance]
+    final_character_states: Mapping[str, ResolvedPerformance]
+
+
+@dataclass(frozen=True, slots=True)
+class CompiledScript:
+    script_id: str
+    scenes: tuple[CompiledScene, ...]
+    timeline: tuple[TimelineItem, ...]
+    segments: tuple[SpeechSegment, ...]
+    final_character_states: Mapping[str, ResolvedPerformance]

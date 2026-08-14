@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.2
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,11 +26,11 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Eleven v3 emotion, intensity, energy, pace, volume, delivery, cues, and authored tags preserve deterministic authored order.
-- [ ] Exact/case-sensitive pronunciation matching avoids substring corruption and v3 IPA compiles to native form.
-- [ ] Dictionary limits and raw provider settings are validated for the selected endpoint/model before generation.
-- [ ] Unsupported semantic intent yields a stable warning or capability error, never silent omission.
-- [ ] Translation version and all material provider inputs are available to render identity.
+- [x] Eleven v3 emotion, intensity, energy, pace, volume, delivery, cues, and authored tags preserve deterministic authored order.
+- [x] Exact/case-sensitive pronunciation matching avoids substring corruption and v3 IPA compiles to native form.
+- [x] Dictionary limits and raw provider settings are validated for the selected endpoint/model before generation.
+- [x] Unsupported semantic intent yields a stable warning or capability error, never silent omission.
+- [x] Translation version and all material provider inputs are available to render identity.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -39,14 +39,15 @@
 - 2026-08-14: Advanced to checkpoint 2.1 for provider capability contracts and deterministic render planning; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
 - 2026-08-14: Implemented endpoint-specific provider contracts, deterministic request grouping/splitting, pre-generation capability failures, ordered plan events, and a no-network deterministic fake provider for checkpoint 2.1.
 - 2026-08-14: Review PASS for checkpoint 2.1 after applying scene-level chunk ceilings and correcting fake-provider audio identity to include semantic performance but exclude editorial IDs; 87 tests and static gates pass, and the pointer advanced to 2.2.
+- 2026-08-14: Implemented versioned Eleven v3 semantic/audio-tag translation, boundary-safe pronunciation and native IPA, endpoint-scoped raw-option validation, provider request materialization, and pre-split prepared-text planning for checkpoint 2.2.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_planner.py tests/test_capabilities.py -q` -> 19 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 87 passed; static checks pass.
-- path: src/elscript/planner.py
+- `.venv/bin/python -m pytest tests/test_elevenlabs_prompt.py tests/test_pronunciation.py tests/test_planner.py tests/test_capabilities.py -q` -> 46 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 114 passed; static checks pass.
+- path: src/elscript/providers/elevenlabs_prompt.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

@@ -318,6 +318,11 @@ def _known_dialogue_parts(
                 "Manifest voice metadata repeats a dialogue input",
                 context={"request_id": timing.request.id, "part_index": index},
             )
+        if index != len(parts):
+            raise AssemblyError(
+                "Manifest voice metadata does not follow dialogue input order",
+                context={"request_id": timing.request.id, "part_index": index},
+            )
         if (
             not math.isfinite(metadata.start_seconds)
             or not math.isfinite(metadata.end_seconds)

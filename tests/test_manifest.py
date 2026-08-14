@@ -38,6 +38,8 @@ def _render_case(
     output_mode: str,
     *,
     private: bool = False,
+    first_text: str = "AB",
+    chunking_max: int | None = None,
 ) -> _RenderedCase:
     document = validate_document(
         load_document(
@@ -59,7 +61,7 @@ def _render_case(
                         "id": "arrival",
                         "title": "Arrival",
                         "script": [
-                            {"MARA": "AB"},
+                            {"MARA": first_text},
                             {"ORION": "CD"},
                             {"pause": 0.25},
                             {"marker": "reveal"},
@@ -89,6 +91,7 @@ def _render_case(
         document,
         process_env={},
         credential="credential-secret",
+        options=({"chunking": {"max_chars": chunking_max}} if chunking_max is not None else None),
     )
     compiled = compile_document(document, config)
     plan = plan_render(compiled, config, fake_capabilities())
@@ -217,6 +220,35 @@ def test_timeline_and_provider_metadata_translate_across_request_boundaries(
         assert item.file_start_seconds[0] == 0.0
 
 
+def test_split_logical_segment_alignment_uses_cumulative_file_offsets(tmp_path: Path) -> None:
+    case = _render_case(
+        tmp_path,
+        "segment",
+        first_text="ABCDEFGHIJ",
+        chunking_max=4,
+    )
+    manifest = build_manifest(
+        case.compiled,
+        case.plan,
+        case.results,
+        case.outputs,
+        case.config,
+    )
+    first_segment = manifest.segments[0]
+    character = [
+        item
+        for item in manifest.alignments
+        if item.kind == "character" and item.segment_id == first_segment.id
+    ]
+
+    assert len(first_segment.render_request_ids) == 3
+    assert first_segment.duration_seconds == pytest.approx(0.3, abs=1 / 16_000)
+    assert ["".join(item.characters) for item in character] == ["ABCD", "EFGH", "IJ"]
+    assert [item.file_start_seconds[0] for item in character if item.file_start_seconds] == (
+        pytest.approx([0.0, 0.1, 0.2], abs=1 / 16_000)
+    )
+
+
 def test_private_manifest_omits_authored_and_provider_metadata_and_redacts_secrets(
     tmp_path: Path,
 ) -> None:
@@ -308,6 +340,31 @@ def test_manifest_rejects_malformed_provider_timing_metadata(tmp_path: Path) -> 
             case.compiled,
             case.plan,
             repeated_voice,
+            case.outputs,
+            case.config,
+        )
+
+    reversed_voice = dict(case.results)
+    reversed_voice[dialogue.id] = replace(
+        result,
+        voice_segments=(
+            replace(
+                result.voice_segments[1],
+                start_seconds=0.0,
+                end_seconds=0.1,
+            ),
+            replace(
+                result.voice_segments[0],
+                start_seconds=0.1,
+                end_seconds=0.2,
+            ),
+        ),
+    )
+    with pytest.raises(AssemblyError, match="does not follow dialogue input order"):
+        build_manifest(
+            case.compiled,
+            case.plan,
+            reversed_voice,
             case.outputs,
             case.config,
         )

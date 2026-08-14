@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.5
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,12 +26,12 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Persistent state is isolated per character, resets to the effective baseline, and crosses scenes only when explicitly inherited.
-- [ ] Utterance- and segment-level temporary state observes the documented precedence and never mutates persistent state.
-- [ ] Structured `say` preserves state-only commands and authored vocal ordering, including cue-only segments.
-- [ ] Notes are never vocalized; pauses and markers remain ordered timeline events and do not consume speech ordinals.
-- [ ] Generated IDs and global ordinals are deterministic, while explicit IDs remain unchanged.
-- [ ] The comprehensive example compiles to an inspectable timeline with expected final character states.
+- [x] Persistent state is isolated per character, resets to the effective baseline, and crosses scenes only when explicitly inherited.
+- [x] Utterance- and segment-level temporary state observes the documented precedence and never mutates persistent state.
+- [x] Structured `say` preserves state-only commands and authored vocal ordering, including cue-only segments.
+- [x] Notes are never vocalized; pauses and markers remain ordered timeline events and do not consume speech ordinals.
+- [x] Generated IDs and global ordinals are deterministic, while explicit IDs remain unchanged.
+- [x] The comprehensive example compiles to an inspectable timeline with expected final character states.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -45,12 +45,15 @@
 - 2026-08-14: Review PASS for checkpoint 1.3 after adding YAML 1.2 boolean resolution, reserved event-name validation, and credential suffix coverage; full suite/static checks passed and pointer advanced to 1.4.
 - 2026-08-14: Implemented immutable effective configuration, dotenv discovery, five-layer leaf precedence, shared recursive redaction, and secret-safe public/fingerprint serialization for checkpoint 1.4.
 - 2026-08-14: Review PASS for checkpoint 1.4 after adding runtime option type checks, dotenv symlink containment, and explicit empty-seed clearing; full suite/static checks passed and pointer advanced to 1.5.
+- 2026-08-14: Implemented immutable resolved performance, sticky per-character state, structured vocal/event compilation, provider/render overlays, deterministic IDs, and scene/final snapshots for checkpoint 1.5.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- path: .vibe/PLAN.md
+- `.venv/bin/python -m pytest tests/test_compiler.py tests/test_design_examples.py -q` -> 10 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 66 passed; static checks pass.
+- path: src/elscript/compiler.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

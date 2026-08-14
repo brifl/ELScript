@@ -13,6 +13,11 @@
   - Added strict ELScript 1.0 schema/reference validation, layered secret-safe configuration, and deterministic compilation of sticky character state into speech and ordered non-speech timeline events.
   - Review hardening covered safe YAML 1.2 scalar handling, symlink containment, credential redaction, falsey configuration values, structured-speech directions, semantic/provider state isolation, and stable IDs.
   - Evidence: commits `bab4d35` through `52d9290`; 68 tests, Ruff, and strict mypy passed at consolidation.
+- 2026-08-14 — Stage 2: ElevenLabs rendering and file outputs
+  - Shipped provider-neutral capability/request contracts, deterministic planning, a no-network fake provider, versioned ElevenLabs semantic/pronunciation translation, and an injectable production HTTP adapter.
+  - Added real codec-backed audio assembly, all three safe output modes, privacy-aware global-timeline manifests, and one canonical file/YAML/mapping/directory render pipeline behind the Python API and thin CLI.
+  - Review hardening covered chunk and continuity boundaries, malformed provider timing, zero-retention constraints, path containment and preflight, rollback after partial failure, request-spanning alignment, recursive secret removal, and the public ElevenLabs branch without a live call.
+  - Evidence: commits `9d14a09` through `9dcf402`; 171 tests, Ruff, strict mypy, and the 30-segment `signal_below` CLI demo passed at consolidation.
 
 ## Resolved issues
 

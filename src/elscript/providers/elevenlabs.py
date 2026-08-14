@@ -415,9 +415,6 @@ class ElevenLabsProvider:
             method="POST",
             url=url,
             headers={
-                "Accept": "application/json"
-                if materialized.operation in _TIMESTAMP_OPERATIONS
-                else "audio/mpeg",
                 "Content-Type": "application/json",
                 "xi-api-key": self._credential.reveal(),
             },

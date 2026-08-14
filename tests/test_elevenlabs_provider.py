@@ -41,6 +41,11 @@ class RecordingTransport:
         return self.responses.pop(0)
 
 
+class FailingTransport:
+    def send(self, request: TransportRequest) -> TransportResponse:
+        raise OSError("socket failed and echoed a value that must remain private")
+
+
 def _planned_request(
     *,
     mode: str = "speech",
@@ -283,6 +288,20 @@ def test_missing_credential_and_malformed_provider_data_fail_before_false_succes
     invalid = RecordingTransport(_response(body=b'{"audio_base64":"not base64"}'))
     with pytest.raises(GenerationError, match="invalid audio_base64"):
         ElevenLabsProvider("key", transport=invalid).generate(planned)
+
+
+def test_malformed_alignment_and_transport_failures_are_stable_generation_errors() -> None:
+    planned = _planned_request(timestamps=True)
+    malformed = json.loads(_timestamp_body())
+    malformed["alignment"]["character_end_times_seconds"] = [0.1]
+    transport = RecordingTransport(_response(body=json.dumps(malformed).encode()))
+
+    with pytest.raises(GenerationError, match="inconsistent lengths"):
+        ElevenLabsProvider("key", transport=transport).generate(planned)
+    with pytest.raises(GenerationError, match="transport failed") as caught:
+        ElevenLabsProvider("private-key", transport=FailingTransport()).generate(planned)
+    assert "socket failed" not in str(caught.value)
+    assert "private-key" not in str(caught.value)
 
 
 def test_timestamp_stream_chunks_are_translated_without_live_network() -> None:

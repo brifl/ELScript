@@ -75,6 +75,10 @@ class RenderOptions:
     normalize_loudness: bool | None = None
     manifest_enabled: bool | None = None
     include_source_text: bool | None = None
+    save_request_ids: bool | None = None
+    save_voice_segments: bool | None = None
+    save_character_timestamps: bool | None = None
+    save_normalized_timestamps: bool | None = None
     chunking: Mapping[str, Any] | None = None
     api: Mapping[str, Any] | None = None
 

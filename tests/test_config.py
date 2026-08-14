@@ -176,3 +176,30 @@ def test_chunking_and_api_are_immutable_leaf_merged() -> None:
     assert config.api["settings"] == {"stability": 0.4, "style": 0.8}
     with pytest.raises(TypeError):
         config.api["settings"]["style"] = 0.2  # type: ignore[index]
+
+
+def test_manifest_privacy_flags_resolve_without_changing_audio_identity() -> None:
+    public = resolve_config(_document(), process_env={})
+    private = resolve_config(
+        _document(
+            {
+                "export": {
+                    "manifest": {"include_source_text": False},
+                    "metadata": {
+                        "save_request_ids": False,
+                        "save_voice_segments": False,
+                        "save_character_timestamps": False,
+                        "save_normalized_timestamps": False,
+                    },
+                }
+            }
+        ),
+        process_env={},
+    )
+
+    assert private.include_source_text is False
+    assert private.save_request_ids is False
+    assert private.save_voice_segments is False
+    assert private.save_character_timestamps is False
+    assert private.save_normalized_timestamps is False
+    assert public.fingerprint_inputs() == private.fingerprint_inputs()

@@ -32,6 +32,10 @@ _DEFAULTS: dict[str, Any] = {
     "normalize_loudness": False,
     "manifest_enabled": True,
     "include_source_text": True,
+    "save_request_ids": True,
+    "save_voice_segments": True,
+    "save_character_timestamps": True,
+    "save_normalized_timestamps": True,
     "language": None,
     "chunking": {
         "max_chars": 1800,
@@ -76,6 +80,10 @@ _STRING_OPTION_KEYS = {
 _BOOLEAN_OPTION_KEYS = _BOOLEAN_KEYS | {
     "include_source_text",
     "manifest_enabled",
+    "save_request_ids",
+    "save_voice_segments",
+    "save_character_timestamps",
+    "save_normalized_timestamps",
 }
 _CHUNKING_KEYS = {
     "max_chars",
@@ -202,6 +210,15 @@ def _yaml_layer(document: ELScriptDocument) -> dict[str, Any]:
         layer["manifest_enabled"] = manifest["enabled"]
     if "include_source_text" in manifest:
         layer["include_source_text"] = manifest["include_source_text"]
+    metadata = export.get("metadata", {})
+    for key in (
+        "save_request_ids",
+        "save_voice_segments",
+        "save_character_timestamps",
+        "save_normalized_timestamps",
+    ):
+        if key in metadata:
+            layer[key] = metadata[key]
     if document.meta.language is not None:
         layer["language"] = document.meta.language
     return layer
@@ -298,6 +315,10 @@ class EffectiveConfig:
     normalize_loudness: bool
     manifest_enabled: bool
     include_source_text: bool
+    save_request_ids: bool
+    save_voice_segments: bool
+    save_character_timestamps: bool
+    save_normalized_timestamps: bool
     language: str | None
     chunking: EffectiveChunking
     api: Mapping[str, Any]
@@ -321,6 +342,10 @@ class EffectiveConfig:
             "normalize_loudness": self.normalize_loudness,
             "manifest_enabled": self.manifest_enabled,
             "include_source_text": self.include_source_text,
+            "save_request_ids": self.save_request_ids,
+            "save_voice_segments": self.save_voice_segments,
+            "save_character_timestamps": self.save_character_timestamps,
+            "save_normalized_timestamps": self.save_normalized_timestamps,
             "language": self.language,
             "chunking": asdict(self.chunking),
             "api": redact(dict(self.api)),
@@ -335,6 +360,10 @@ class EffectiveConfig:
         values.pop("output_mode", None)
         values.pop("manifest_enabled", None)
         values.pop("include_source_text", None)
+        values.pop("save_request_ids", None)
+        values.pop("save_voice_segments", None)
+        values.pop("save_character_timestamps", None)
+        values.pop("save_normalized_timestamps", None)
         return values
 
 
@@ -383,6 +412,10 @@ def resolve_config(
         normalize_loudness=values["normalize_loudness"],
         manifest_enabled=values["manifest_enabled"],
         include_source_text=values["include_source_text"],
+        save_request_ids=values["save_request_ids"],
+        save_voice_segments=values["save_voice_segments"],
+        save_character_timestamps=values["save_character_timestamps"],
+        save_normalized_timestamps=values["save_normalized_timestamps"],
         language=values["language"],
         chunking=effective_chunking,
         api=_freeze(values["api"]),

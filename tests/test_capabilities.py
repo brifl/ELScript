@@ -177,3 +177,27 @@ def test_fake_provider_is_protocol_compatible_deterministic_and_no_network() -> 
     assert chunks[0].final is True
     assert len(first_provider.requests) == 1
     assert len(second_provider.requests) == 2
+
+
+def test_fake_provider_identity_tracks_audio_inputs_not_editorial_ids() -> None:
+    compiled, config = _compiled_config(render={"mode": "speech"})
+    request = plan_render(compiled, config, fake_capabilities()).requests[0]
+    provider = FakeProvider()
+
+    renamed_segment = replace(request.parts[0].segment, id="editorial.rename")
+    renamed_part = replace(request.parts[0], segment=renamed_segment)
+    renamed_request = replace(request, parts=(renamed_part,))
+    changed_performance = replace(
+        request.parts[0].segment.performance,
+        emotion="angry",
+    )
+    expressive_segment = replace(
+        request.parts[0].segment,
+        performance=changed_performance,
+    )
+    expressive_part = replace(request.parts[0], segment=expressive_segment)
+    expressive_request = replace(request, parts=(expressive_part,))
+
+    original_audio = provider.generate(request).audio
+    assert provider.generate(renamed_request).audio == original_audio
+    assert provider.generate(expressive_request).audio != original_audio

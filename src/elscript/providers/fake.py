@@ -71,7 +71,6 @@ def _plain(value: Any) -> Any:
 def _request_identity(request: ProviderRequest) -> bytes:
     payload = {
         "kind": request.kind.value,
-        "scene_id": request.scene_id,
         "model": request.model,
         "language": request.language,
         "output_format": request.output_format,
@@ -85,14 +84,19 @@ def _request_identity(request: ProviderRequest) -> bytes:
         "provider_options": _plain(request.provider_options),
         "parts": [
             {
-                "logical_id": part.logical_id,
-                "part_index": part.part_index,
-                "part_count": part.part_count,
-                "speaker": part.segment.speaker,
                 "voice_id": part.segment.voice_id,
                 "text": part.text,
                 "cues": part.segment.cues,
                 "tags": part.segment.tags,
+                "performance": {
+                    "emotion": part.segment.performance.emotion,
+                    "intensity": part.segment.performance.intensity,
+                    "energy": part.segment.performance.energy,
+                    "pace": part.segment.performance.pace,
+                    "volume": part.segment.performance.volume,
+                    "delivery": part.segment.performance.delivery,
+                    "accent": part.segment.performance.accent,
+                },
             }
             for part in request.parts
         ],

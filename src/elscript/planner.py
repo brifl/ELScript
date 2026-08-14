@@ -134,8 +134,22 @@ def _parts_for_segment(
     )
 
 
-def _request_limit(config: EffectiveConfig, endpoint: EndpointCapabilities) -> int:
-    limits = [config.chunking.max_chars]
+def _request_limit(
+    config: EffectiveConfig,
+    endpoint: EndpointCapabilities,
+    segment: SpeechSegment,
+) -> int:
+    chunking = _setting(segment, "chunking", {})
+    scene_max_chars = (
+        chunking.get("max_chars")
+        if isinstance(chunking, Mapping)
+        else None
+    )
+    limits = [
+        int(scene_max_chars)
+        if scene_max_chars is not None
+        else config.chunking.max_chars
+    ]
     if endpoint.recommended_request_chars is not None:
         limits.append(endpoint.recommended_request_chars)
     if endpoint.hard_request_chars is not None:
@@ -306,7 +320,7 @@ def _request_drafts(
     config: EffectiveConfig,
     streaming: bool,
 ) -> tuple[_RequestDraft, ...]:
-    limit = _request_limit(config, endpoint)
+    limit = _request_limit(config, endpoint, segments[0])
     parts_by_segment = [
         _parts_for_segment(segment, request_limit=limit) for segment in segments
     ]

@@ -240,6 +240,24 @@ def test_direction_characters_are_counted_for_request_limits() -> None:
     assert all(request.character_count <= 12 for request in plan.requests)
 
 
+def test_scene_chunking_override_controls_its_request_limit() -> None:
+    compiled, config = _compile(
+        [
+            {
+                "id": "scene",
+                "render": {"mode": "speech", "chunking": {"max_chars": 7}},
+                "script": [{"MARA": "alpha beta gamma"}],
+            }
+        ],
+        chunking_max=100,
+    )
+
+    plan = plan_render(compiled, config, fake_capabilities(request_chars=200))
+
+    assert len(plan.requests) == 3
+    assert all(request.character_count <= 7 for request in plan.requests)
+
+
 def test_dialogue_plan_requests_timestamps_needed_for_segment_output() -> None:
     compiled, config = _compile(
         [{"id": "scene", "script": [{"MARA": "One"}, {"ORION": "Two"}]}],

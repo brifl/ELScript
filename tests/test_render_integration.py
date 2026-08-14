@@ -12,6 +12,9 @@ from elscript.audio import decode_audio
 from elscript.domain import RenderResult
 from elscript.errors import GenerationError, WriteError
 from elscript.loading import load_document
+from elscript.providers.base import GenerationResult, ProviderCapabilities, ProviderRequest
+from elscript.providers.elevenlabs_prompt import elevenlabs_capabilities
+from elscript.providers.fake import FakeProvider
 
 FIXTURES = Path(__file__).parent / "fixtures"
 SIGNAL_FILE = FIXTURES / "signal_below.yaml"
@@ -207,3 +210,67 @@ def test_generation_and_manifest_failures_leave_no_partial_audio(
     with pytest.raises(WriteError, match="synthetic manifest"):
         render_document(_small_document(), output_dir=manifest_output)
     assert not tuple(manifest_output.iterdir())
+
+
+def test_public_pipeline_prepares_elevenlabs_requests_and_returns_warnings(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class StubElevenLabsProvider:
+        def __init__(self) -> None:
+            self.generated: list[ProviderRequest] = []
+            self.fake = FakeProvider()
+
+        def describe_capabilities(self) -> ProviderCapabilities:
+            return elevenlabs_capabilities()
+
+        def generate(self, request: ProviderRequest) -> GenerationResult:
+            self.generated.append(request)
+            return self.fake.generate(request)
+
+    provider = StubElevenLabsProvider()
+    monkeypatch.setattr(
+        api_module,
+        "ElevenLabsProvider",
+        lambda credential: provider,
+    )
+    document = {
+        "elscript": "1.0",
+        "meta": {"id": "eleven-path"},
+        "render": {
+            "provider": "elevenlabs",
+            "mode": "speech",
+            "model": "eleven_v3",
+            "output_format": "wav_16000",
+            "timestamps": True,
+            "seed": 7,
+        },
+        "pronunciation": {"terms": {"Calypso": {"ipa": "kəˈlɪpsoʊ"}}},
+        "characters": {"MARA": {"voice_id": "voice-mara"}},
+        "scenes": [
+            {
+                "id": "one",
+                "script": [
+                    {
+                        "MARA": {
+                            "with": {"volume": "whisper"},
+                            "say": "Calypso is listening.",
+                        }
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = render_document(document, output_dir=tmp_path / "eleven")
+
+    assert len(provider.generated) == 1
+    part = provider.generated[0].parts[0]
+    assert part.translation_version == "elevenlabs-prompt-v1"
+    assert part.text is not None
+    assert "[whispers]" in part.text
+    assert "/kəˈlɪpsoʊ/" in part.text
+    assert [warning.code for warning in result.warnings] == ["ELEVENLABS_SEED_BEST_EFFORT"]
+    assert result.manifest_path is not None
+    payload = json.loads(result.manifest_path.read_text(encoding="utf-8"))
+    assert [warning["code"] for warning in payload["warnings"]] == ["ELEVENLABS_SEED_BEST_EFFORT"]

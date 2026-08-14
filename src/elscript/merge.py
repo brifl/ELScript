@@ -66,11 +66,51 @@ def _raise_conflict(
     )
 
 
-def _stable_union(first: list[Any], second: list[Any]) -> list[Any]:
+def _copy_indexed_provenance(
+    target: dict[str, SourceLocation],
+    incoming: LoadedDocument,
+    *,
+    path: str,
+    old_index: int,
+    new_index: int,
+) -> None:
+    old_prefix = f"{path}[{old_index}]"
+    new_prefix = f"{path}[{new_index}]"
+    for candidate, location in incoming.provenance.items():
+        belongs_to_item = (
+            candidate == old_prefix
+            or candidate.startswith(f"{old_prefix}.")
+            or candidate.startswith(f"{old_prefix}[")
+        )
+        if belongs_to_item:
+            target[f"{new_prefix}{candidate[len(old_prefix):]}"] = SourceLocation(
+                source=location.source,
+                yaml_path=f"{new_prefix}{candidate[len(old_prefix):]}",
+                line=location.line,
+                column=location.column,
+            )
+
+
+def _stable_union(
+    first: list[Any],
+    second: list[Any],
+    *,
+    path: str,
+    target_provenance: dict[str, SourceLocation],
+    incoming: LoadedDocument,
+) -> list[Any]:
     result = deepcopy(first)
-    for item in second:
+    for old_index, item in enumerate(second):
         if item not in result:
+            new_index = len(result)
             result.append(deepcopy(item))
+            _copy_indexed_provenance(
+                target_provenance,
+                incoming,
+                path=path,
+                old_index=old_index,
+                new_index=new_index,
+            )
     return result
 
 
@@ -79,7 +119,7 @@ def _merge_dictionary_references(
     second: list[Any],
     *,
     path: str,
-    target_provenance: Mapping[str, SourceLocation],
+    target_provenance: dict[str, SourceLocation],
     incoming: LoadedDocument,
 ) -> list[Any]:
     result = deepcopy(first)
@@ -88,7 +128,7 @@ def _merge_dictionary_references(
         for item in result
         if isinstance(item, Mapping) and isinstance(item.get("id"), str)
     }
-    for item in second:
+    for old_index, item in enumerate(second):
         if isinstance(item, Mapping) and isinstance(item.get("id"), str):
             existing = by_id.get(item["id"])
             if existing is not None and existing != item:
@@ -104,7 +144,15 @@ def _merge_dictionary_references(
             by_id[item["id"]] = item
         elif item in result:
             continue
+        new_index = len(result)
         result.append(deepcopy(item))
+        _copy_indexed_provenance(
+            target_provenance,
+            incoming,
+            path=path,
+            old_index=old_index,
+            new_index=new_index,
+        )
     return result
 
 
@@ -137,7 +185,13 @@ def _merge_values(
             continue
         if isinstance(target_value, list) and isinstance(incoming_value, list):
             if child_path == "$.meta.tags":
-                target[key] = _stable_union(target_value, incoming_value)
+                target[key] = _stable_union(
+                    target_value,
+                    incoming_value,
+                    path=child_path,
+                    target_provenance=target_provenance,
+                    incoming=incoming,
+                )
                 continue
             if child_path == "$.pronunciation.dictionaries":
                 target[key] = _merge_dictionary_references(

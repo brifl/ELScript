@@ -182,7 +182,9 @@ def load_document(
     if document is not None:
         return merge_documents((_load_mapping(document),))
 
-    source_path = Path(source)  # type: ignore[arg-type]
+    if source is None:  # narrowed by the exactly-one check above
+        raise AssertionError("source form selection invariant was violated")
+    source_path = Path(source)
     if not source_path.exists():
         raise SourceNotFoundError(f"Source does not exist: {source_path}")
     if source_path.is_file():

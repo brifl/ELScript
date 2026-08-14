@@ -24,6 +24,7 @@ def test_compatible_mappings_merge_and_tags_form_stable_union(tmp_path: Path) ->
     assert merged.data["characters"] == {
         "MARA": {"voice_id": "abc", "defaults": {"emotion": "calm"}}
     }
+    assert merged.provenance["$.meta.tags[2]"].source.endswith("b.yaml")
 
 
 def test_conflict_reports_logical_path_and_both_sources(tmp_path: Path) -> None:

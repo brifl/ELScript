@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.2
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,11 +26,11 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Exactly one of `source`, `yaml_text`, or `document` is required, and all three converge on the same canonical representation.
-- [ ] YAML uses safe construction and rejects non-mapping roots with source-aware `InputError` diagnostics.
-- [ ] Directory discovery is recursive, excludes hidden/output locations, and is independent of filesystem enumeration order.
-- [ ] Mapping conflicts name the logical path and both sources; identical leaves merge and duplicate scene IDs fail.
-- [ ] Final scene ordering follows explicit order, normalized source path, and in-file position deterministically.
+- [x] Exactly one of `source`, `yaml_text`, or `document` is required, and all three converge on the same canonical representation.
+- [x] YAML uses safe construction and rejects non-mapping roots with source-aware `InputError` diagnostics.
+- [x] Directory discovery is recursive, excludes hidden/output locations, and is independent of filesystem enumeration order.
+- [x] Mapping conflicts name the logical path and both sources; identical leaves merge and duplicate scene IDs fail.
+- [x] Final scene ordering follows explicit order, normalized source path, and in-file position deterministically.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -38,12 +38,15 @@
 - 2026-08-14: Replaced the placeholder roadmap with three implementation stages derived from `DESIGN.md` and aligned the active pointer to checkpoint 1.1.
 - 2026-08-14: Implemented Python 3.11+ packaging, immutable boundary models, the documented error hierarchy, public API signatures, CLI help, and contract tests; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
 - 2026-08-14: Review PASS for checkpoint 1.1; verified the built wheel in a fresh environment, reran tests/lint/types, probed source ambiguity and nested redaction, and auto-advanced to 1.2.
+- 2026-08-14: Implemented safe YAML/file/directory/mapping loading, provenance, deterministic discovery/order, section-aware merging, conflict diagnostics, and split-project fixtures for checkpoint 1.2.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- path: .vibe/PLAN.md
+- `.venv/bin/python -m pytest tests/test_loading.py tests/test_merge.py tests/test_pipeline_equivalence.py -q` -> 14 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 28 passed; static checks pass.
+- path: tests/fixtures/split_story/meta.yaml
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

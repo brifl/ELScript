@@ -18,7 +18,10 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
   "Typing :: Typed",
 ]
-dependencies = ["PyYAML>=6.0"]
+dependencies = [
+  "pydantic>=2.10",
+  "PyYAML>=6.0",
+]
 
 [project.optional-dependencies]
 dev = [

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from typing import Any
@@ -18,6 +19,7 @@ from .providers.base import (
     DictionaryLocator,
     EndpointCapabilities,
     PlannedSegmentPart,
+    PreparedSegment,
     ProviderCapabilities,
     ProviderFeature,
     ProviderRequest,
@@ -73,13 +75,20 @@ def _direction_text(segment: SpeechSegment) -> str:
 
 
 def _character_count(part: PlannedSegmentPart) -> int:
+    if part.translation_version is not None:
+        return len(part.text or "")
     directions = _direction_text(part.segment)
     if part.text is None:
         return len(directions)
     return len(part.text) + len(directions) + (1 if directions else 0)
 
 
-def _split_text(text: str, max_chars: int) -> tuple[str, ...]:
+def _split_text(
+    text: str,
+    max_chars: int,
+    *,
+    atomic_tokens: Sequence[str] = (),
+) -> tuple[str, ...]:
     """Split without losing characters, preferring the last whitespace boundary."""
 
     if len(text) <= max_chars:
@@ -92,6 +101,23 @@ def _split_text(text: str, max_chars: int) -> tuple[str, ...]:
             default=-1,
         )
         cut = boundary + 1 if boundary > 0 else max_chars
+        protected_ranges = [
+            (match.start(), match.end())
+            for token in atomic_tokens
+            for match in re.finditer(re.escape(token), remaining)
+        ]
+        containing = next(
+            ((start, end) for start, end in protected_ranges if start < cut < end),
+            None,
+        )
+        if containing is not None:
+            start, end = containing
+            if start == 0:
+                if end > max_chars:
+                    raise ValueError("an atomic provider-text token exceeds the request limit")
+                cut = end
+            else:
+                cut = start
         parts.append(remaining[:cut])
         remaining = remaining[cut:]
     if remaining:
@@ -103,12 +129,15 @@ def _parts_for_segment(
     segment: SpeechSegment,
     *,
     request_limit: int,
+    prepared: PreparedSegment | None = None,
 ) -> tuple[PlannedSegmentPart, ...]:
-    direction_chars = len(_direction_text(segment))
-    if segment.text is not None and direction_chars:
+    direction_text = prepared.prefix if prepared is not None else _direction_text(segment)
+    direction_chars = len(direction_text)
+    source_text = prepared.text if prepared is not None else segment.text
+    if source_text is not None and direction_chars:
         direction_chars += 1
     text_budget = request_limit - direction_chars
-    if segment.text is None:
+    if source_text is None:
         if direction_chars > request_limit:
             raise ProviderLimitError(
                 f"Segment {segment.id!r} directions exceed the provider request limit",
@@ -121,17 +150,39 @@ def _parts_for_segment(
                 f"Segment {segment.id!r} directions leave no room for speech text",
                 context={"segment_id": segment.id, "limit": request_limit},
             )
-        texts = _split_text(segment.text, text_budget)
+        try:
+            texts = _split_text(
+                source_text,
+                text_budget,
+                atomic_tokens=(prepared.atomic_tokens if prepared is not None else ()),
+            )
+        except ValueError as error:
+            raise ProviderLimitError(
+                f"Segment {segment.id!r} contains an indivisible provider token that exceeds "
+                "the request limit",
+                context={"segment_id": segment.id, "limit": request_limit},
+            ) from error
     part_count = len(texts)
-    return tuple(
-        PlannedSegmentPart(
-            segment=segment,
-            text=text,
-            part_index=index,
-            part_count=part_count,
+    parts: list[PlannedSegmentPart] = []
+    for index, text in enumerate(texts, start=1):
+        provider_text = text
+        if prepared is not None:
+            provider_text = " ".join(
+                value for value in (prepared.prefix, text) if value
+            )
+        parts.append(
+            PlannedSegmentPart(
+                segment=segment,
+                text=provider_text,
+                part_index=index,
+                part_count=part_count,
+                translation_version=(
+                    prepared.translation_version if prepared is not None else None
+                ),
+                features_used=(prepared.features_used if prepared is not None else frozenset()),
+            )
         )
-        for index, text in enumerate(texts, start=1)
-    )
+    return tuple(parts)
 
 
 def _request_limit(
@@ -165,6 +216,7 @@ def _capability_error(
     config: EffectiveConfig,
     streaming: bool,
     dictionaries: Sequence[DictionaryLocator],
+    prepared_segments: Mapping[str, PreparedSegment],
 ) -> CapabilityError | None:
     model = segment.model
     output_format = str(_setting(segment, "output_format", config.output_format))
@@ -215,6 +267,23 @@ def _capability_error(
                 "limit": endpoint.max_pronunciation_dictionaries,
             },
         )
+    if endpoint.supported_provider_options is not None:
+        unsupported_options = set(segment.provider_options) - endpoint.supported_provider_options
+        if unsupported_options:
+            return UnsupportedModelFeatureError(
+                f"{kind.value} requests do not support provider option(s): "
+                f"{', '.join(sorted(unsupported_options))}",
+                context={"mode": kind.value, "segment_id": segment.id},
+            )
+    prepared = prepared_segments.get(segment.id)
+    if prepared is not None:
+        missing_features = prepared.features_used - endpoint.features
+        if missing_features:
+            return UnsupportedModelFeatureError(
+                f"{kind.value} requests cannot honor translated feature(s): "
+                f"{', '.join(sorted(feature.value for feature in missing_features))}",
+                context={"mode": kind.value, "segment_id": segment.id},
+            )
     if _setting(segment, "seed", config.seed) is not None and not endpoint.supports(
         ProviderFeature.SEED
     ):
@@ -258,6 +327,7 @@ def _endpoint_for_run(
     capabilities: ProviderCapabilities,
     streaming: bool,
     dictionaries: Sequence[DictionaryLocator],
+    prepared_segments: Mapping[str, PreparedSegment],
 ) -> tuple[RequestKind, EndpointCapabilities]:
     requested_mode = str(_setting(segments[0], "render_mode", config.render_mode))
     if requested_mode not in {"auto", "speech", "dialogue"}:
@@ -278,6 +348,7 @@ def _endpoint_for_run(
                 config=config,
                 streaming=streaming,
                 dictionaries=dictionaries,
+                prepared_segments=prepared_segments,
             )
             if error is not None:
                 return endpoint, error
@@ -291,17 +362,20 @@ def _endpoint_for_run(
         assert endpoint is not None
         return kind, endpoint
 
-    should_try_dialogue = len(segments) > 1 and len({item.speaker for item in segments}) > 1
-    if should_try_dialogue:
-        dialogue, dialogue_error = candidate(RequestKind.DIALOGUE)
-        if dialogue is not None and dialogue_error is None:
-            return RequestKind.DIALOGUE, dialogue
-
-    speech, speech_error = candidate(RequestKind.SPEECH)
-    if speech_error is not None:
-        raise speech_error
-    assert speech is not None
-    return RequestKind.SPEECH, speech
+    multi_speaker = len(segments) > 1 and len({item.speaker for item in segments}) > 1
+    preference = (
+        (RequestKind.DIALOGUE, RequestKind.SPEECH)
+        if multi_speaker
+        else (RequestKind.SPEECH, RequestKind.DIALOGUE)
+    )
+    errors: list[CapabilityError] = []
+    for kind in preference:
+        endpoint, error = candidate(kind)
+        if endpoint is not None and error is None:
+            return kind, endpoint
+        if error is not None:
+            errors.append(error)
+    raise errors[0]
 
 
 @dataclass(frozen=True, slots=True)
@@ -319,10 +393,16 @@ def _request_drafts(
     endpoint: EndpointCapabilities,
     config: EffectiveConfig,
     streaming: bool,
+    prepared_segments: Mapping[str, PreparedSegment],
 ) -> tuple[_RequestDraft, ...]:
     limit = _request_limit(config, endpoint, segments[0])
     parts_by_segment = [
-        _parts_for_segment(segment, request_limit=limit) for segment in segments
+        _parts_for_segment(
+            segment,
+            request_limit=limit,
+            prepared=prepared_segments.get(segment.id),
+        )
+        for segment in segments
     ]
     force_timestamps = kind is RequestKind.DIALOGUE and (
         streaming or config.output_mode == "segment"
@@ -393,6 +473,7 @@ def plan_render(
     *,
     streaming: bool = False,
     dictionaries: Iterable[DictionaryLocator] = (),
+    prepared_segments: Mapping[str, PreparedSegment] | None = None,
 ) -> RenderPlan:
     """Create a deterministic, charge-free request plan for a compiled script."""
 
@@ -406,6 +487,14 @@ def plan_render(
             },
         )
     dictionary_locators = tuple(dictionaries)
+    prepared = {} if prepared_segments is None else dict(prepared_segments)
+    segment_ids = {segment.id for segment in compiled.segments}
+    unknown_prepared_ids = set(prepared) - segment_ids
+    if unknown_prepared_ids:
+        raise CapabilityError(
+            "Prepared provider text references unknown segment(s): "
+            f"{', '.join(sorted(unknown_prepared_ids))}"
+        )
     timeline: list[PlanEvent] = []
     requests: list[ProviderRequest] = []
     pending: list[SpeechSegment] = []
@@ -419,6 +508,7 @@ def plan_render(
             capabilities=capabilities,
             streaming=streaming,
             dictionaries=dictionary_locators,
+            prepared_segments=prepared,
         )
         for draft in _request_drafts(
             pending,
@@ -426,6 +516,7 @@ def plan_render(
             endpoint=endpoint,
             config=config,
             streaming=streaming,
+            prepared_segments=prepared,
         ):
             first = draft.parts[0].segment
             request = ProviderRequest(
@@ -460,6 +551,21 @@ def plan_render(
                     )
                 if pending and _compatibility_key(pending[-1]) != _compatibility_key(event):
                     flush()
+                elif pending:
+                    previous_prepared = prepared.get(pending[-1].id)
+                    current_prepared = prepared.get(event.id)
+                    previous_version = (
+                        previous_prepared.translation_version
+                        if previous_prepared is not None
+                        else None
+                    )
+                    current_version = (
+                        current_prepared.translation_version
+                        if current_prepared is not None
+                        else None
+                    )
+                    if previous_version != current_version:
+                        flush()
                 pending.append(event)
             else:
                 flush()

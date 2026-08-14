@@ -45,6 +45,7 @@ class EndpointCapabilities:
     hard_request_chars: int | None = None
     max_unique_voices: int = 1
     max_pronunciation_dictionaries: int = 0
+    supported_provider_options: frozenset[str] | None = None
 
     def __post_init__(self) -> None:
         for name in ("recommended_request_chars", "hard_request_chars"):
@@ -97,6 +98,8 @@ class PlannedSegmentPart:
     text: str | None
     part_index: int = 1
     part_count: int = 1
+    translation_version: str | None = None
+    features_used: frozenset[ProviderFeature] = frozenset()
 
     def __post_init__(self) -> None:
         if self.part_count < 1 or not 1 <= self.part_index <= self.part_count:
@@ -105,6 +108,27 @@ class PlannedSegmentPart:
     @property
     def logical_id(self) -> str:
         return self.segment.id
+
+
+@dataclass(frozen=True, slots=True)
+class PreparedSegment:
+    """Provider-ready text produced before character-aware request splitting."""
+
+    text: str | None
+    translation_version: str
+    prefix: str = ""
+    features_used: frozenset[ProviderFeature] = frozenset()
+    atomic_tokens: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.translation_version or (not self.prefix and not self.text):
+            raise ValueError("prepared content and translation_version must not be empty")
+        if any(not token for token in self.atomic_tokens):
+            raise ValueError("atomic provider-text tokens must not be empty")
+
+    @property
+    def provider_text(self) -> str:
+        return " ".join(value for value in (self.prefix, self.text) if value)
 
 
 @dataclass(frozen=True, slots=True)

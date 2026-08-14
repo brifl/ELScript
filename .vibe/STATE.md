@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.3
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,10 +26,10 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] The comprehensive example validates, including scalar speech, structured `say`, `set`, `with`, `reset`, `cue`, `tags`, `pause`, `note`, and `marker` forms.
-- [ ] Unknown core fields, unsupported schema versions, malformed values, and performance values outside defined ranges fail before rendering.
-- [ ] Unknown characters/presets, duplicate logical IDs, and missing required voice IDs produce actionable source/YAML paths.
-- [ ] The `api` escape hatch preserves structured provider data without accepting credentials or weakening core schema checks.
+- [x] The comprehensive example validates, including scalar speech, structured `say`, `set`, `with`, `reset`, `cue`, `tags`, `pause`, `note`, and `marker` forms.
+- [x] Unknown core fields, unsupported schema versions, malformed values, and performance values outside defined ranges fail before rendering.
+- [x] Unknown characters/presets, duplicate logical IDs, and missing required voice IDs produce actionable source/YAML paths.
+- [x] The `api` escape hatch preserves structured provider data without accepting credentials or weakening core schema checks.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -39,12 +39,15 @@
 - 2026-08-14: Review PASS for checkpoint 1.1; verified the built wheel in a fresh environment, reran tests/lint/types, probed source ambiguity and nested redaction, and auto-advanced to 1.2.
 - 2026-08-14: Implemented safe YAML/file/directory/mapping loading, provenance, deterministic discovery/order, section-aware merging, conflict diagnostics, and split-project fixtures for checkpoint 1.2.
 - 2026-08-14: Review PASS for checkpoint 1.2 after fixing appended-list provenance, rerunning the full suite/static checks, and rejecting an external-source symlink probe; auto-advanced to 1.3.
+- 2026-08-14: Implemented strict ELScript 1.0 structural models, source-aware schema diagnostics, credential checks, and character/preset/ID reference validation for checkpoint 1.3.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- path: .vibe/PLAN.md
+- `.venv/bin/python -m pytest tests/test_schema.py tests/test_validation.py tests/test_design_examples.py -q` -> 10 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 38 passed; static checks pass.
+- path: tests/test_design_examples.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

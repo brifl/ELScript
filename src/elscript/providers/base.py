@@ -171,6 +171,8 @@ class VoiceSegmentMetadata:
     start_seconds: float
     end_seconds: float
     part_index: int | None = None
+    character_start_index: int | None = None
+    character_end_index: int | None = None
 
 
 @dataclass(frozen=True, slots=True)

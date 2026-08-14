@@ -15,12 +15,21 @@ from .base import (
     RequestKind,
     VoiceSegmentMetadata,
 )
+from .elevenlabs import (
+    ElevenLabsProvider,
+    ElevenLabsTransport,
+    TransportRequest,
+    TransportResponse,
+    UrllibElevenLabsTransport,
+)
 from .fake import FakeProvider, fake_capabilities
 
 __all__ = [
     "CharacterAlignment",
     "DictionaryLocator",
     "EndpointCapabilities",
+    "ElevenLabsProvider",
+    "ElevenLabsTransport",
     "FakeProvider",
     "GenerationChunk",
     "GenerationResult",
@@ -31,6 +40,9 @@ __all__ = [
     "ProviderFeature",
     "ProviderRequest",
     "RequestKind",
+    "TransportRequest",
+    "TransportResponse",
+    "UrllibElevenLabsTransport",
     "VoiceSegmentMetadata",
     "fake_capabilities",
 ]

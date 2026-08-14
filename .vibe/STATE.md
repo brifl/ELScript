@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.3
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -41,14 +41,15 @@
 - 2026-08-14: Review PASS for checkpoint 2.1 after applying scene-level chunk ceilings and correcting fake-provider audio identity to include semantic performance but exclude editorial IDs; 87 tests and static gates pass, and the pointer advanced to 2.2.
 - 2026-08-14: Implemented versioned Eleven v3 semantic/audio-tag translation, boundary-safe pronunciation and native IPA, endpoint-scoped raw-option validation, provider request materialization, and pre-split prepared-text planning for checkpoint 2.2.
 - 2026-08-14: Review PASS for checkpoint 2.2 after adversarial checks for pre-split pronunciation, repeated expressive prefixes, indivisible IPA, endpoint option fallbacks, stable warnings, and secret-safe material identity; pointer advanced to 2.3.
+- 2026-08-14: Implemented the injectable ElevenLabs HTTP adapter, create/stream route selection, timestamp and dialogue metadata normalization, secret-safe failure mapping, and zero-retention-aware continuity validation for checkpoint 2.3.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_elevenlabs_prompt.py tests/test_pronunciation.py -q` -> 27 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 114 passed; static checks pass.
-- path: src/elscript/providers/elevenlabs_prompt.py
+- `.venv/bin/python -m pytest tests/test_elevenlabs_provider.py tests/test_elevenlabs_prompt.py -q` -> 35 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 128 passed; static checks pass.
+- path: src/elscript/providers/elevenlabs.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

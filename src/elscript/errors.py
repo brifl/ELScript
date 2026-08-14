@@ -123,6 +123,10 @@ class RateLimitError(ProviderError):
     default_code = "RATE_LIMIT_ERROR"
 
 
+class ProviderAccountError(ProviderError):
+    default_code = "PROVIDER_ACCOUNT_ERROR"
+
+
 class GenerationError(ProviderError):
     default_code = "GENERATION_ERROR"
 

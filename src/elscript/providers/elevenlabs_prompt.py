@@ -622,6 +622,17 @@ def build_elevenlabs_request(
         )
 
     options = _validate_provider_options(request)
+    enable_logging = bool(request.render_settings.get("enable_logging", True))
+    stitching_options = {"previous_request_ids", "next_request_ids"} & options.keys()
+    if not enable_logging and stitching_options:
+        raise UnsupportedModelFeatureError(
+            "ElevenLabs request stitching is unavailable when zero-retention mode is enabled",
+            context={
+                "request_id": request.id,
+                "provider_options": sorted(stitching_options),
+                "enable_logging": False,
+            },
+        )
     seed = request.render_settings.get("seed")
     if seed is not None and (
         isinstance(seed, bool) or not isinstance(seed, int) or not 0 <= seed <= _MAX_SEED
@@ -708,7 +719,7 @@ def build_elevenlabs_request(
         query=_freeze(
             {
                 "output_format": request.output_format,
-                "enable_logging": bool(request.render_settings.get("enable_logging", True)),
+                "enable_logging": enable_logging,
             }
         ),
         translation_version=TRANSLATION_VERSION,

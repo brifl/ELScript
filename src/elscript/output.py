@@ -355,8 +355,17 @@ def _assemble_targets(
     return tuple(segments[target.segment_id or ""] for target in targets)
 
 
-def _prepare_output_directory(output_dir: str | os.PathLike[str]) -> Path:
+def _prepare_output_directory(
+    output_dir: str | os.PathLike[str],
+    *,
+    audio_extension: str,
+) -> Path:
     requested = Path(output_dir)
+    if requested.suffix.casefold() == f".{audio_extension.casefold()}":
+        raise WriteError(
+            "output_dir must be a directory, not an audio filename",
+            context={"output_dir": str(requested)},
+        )
     try:
         requested.mkdir(parents=True, exist_ok=True)
     except OSError as error:
@@ -417,7 +426,10 @@ def write_render_outputs(
         raise WriteError(f"Unknown render plan output mode {plan.output_mode!r}")
     _validate_results(plan, results)
     targets = build_output_targets(compiled, plan.output_mode, output_format)
-    root = _prepare_output_directory(output_dir)
+    root = _prepare_output_directory(
+        output_dir,
+        audio_extension=format_extension(output_format),
+    )
     paths = _target_paths(root, targets)
     assembled = _assemble_targets(
         compiled,

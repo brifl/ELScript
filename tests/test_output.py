@@ -274,3 +274,20 @@ def test_existing_files_and_incomplete_dialogue_metadata_fail_without_overwrite(
             tmp_path / "incomplete",
             output_format="wav_16000",
         )
+
+
+def test_output_directory_cannot_be_mistaken_for_a_destination_filename(
+    tmp_path: Path,
+) -> None:
+    _, compiled, plan = _pipeline("single")
+    mistaken_filename = tmp_path / "story.wav"
+
+    with pytest.raises(WriteError, match="must be a directory"):
+        write_render_outputs(
+            compiled,
+            plan,
+            _speech_results(plan),
+            mistaken_filename,
+            output_format="wav_16000",
+        )
+    assert not mistaken_filename.exists()

@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.4
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,11 +26,11 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Explicit call/CLI values override YAML, process environment, `.env`, and defaults leaf-by-leaf in that order.
-- [ ] Explicit `false`, zero, and empty values do not fall through to lower layers.
-- [ ] `.env` discovery follows the source-root then current-directory contract, while process environment wins.
-- [ ] Credentials can be supplied explicitly or through `ELEVENLABS_API_KEY` and never appear in representations, errors, manifests, or fingerprint inputs.
-- [ ] Diagnostics identify the selected `.env` path without exposing its contents.
+- [x] Explicit call/CLI values override YAML, process environment, `.env`, and defaults leaf-by-leaf in that order.
+- [x] Explicit `false`, zero, and empty values do not fall through to lower layers.
+- [x] `.env` discovery follows the source-root then current-directory contract, while process environment wins.
+- [x] Credentials can be supplied explicitly or through `ELEVENLABS_API_KEY` and never appear in representations, errors, manifests, or fingerprint inputs.
+- [x] Diagnostics identify the selected `.env` path without exposing its contents.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -42,12 +42,15 @@
 - 2026-08-14: Review PASS for checkpoint 1.2 after fixing appended-list provenance, rerunning the full suite/static checks, and rejecting an external-source symlink probe; auto-advanced to 1.3.
 - 2026-08-14: Implemented strict ELScript 1.0 structural models, source-aware schema diagnostics, credential checks, and character/preset/ID reference validation for checkpoint 1.3.
 - 2026-08-14: Review PASS for checkpoint 1.3 after adding YAML 1.2 boolean resolution, reserved event-name validation, and credential suffix coverage; full suite/static checks passed and pointer advanced to 1.4.
+- 2026-08-14: Implemented immutable effective configuration, dotenv discovery, five-layer leaf precedence, shared recursive redaction, and secret-safe public/fingerprint serialization for checkpoint 1.4.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- path: .vibe/PLAN.md
+- `.venv/bin/python -m pytest tests/test_config.py tests/test_security.py -q` -> 10 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 51 passed; static checks pass.
+- path: src/elscript/config.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

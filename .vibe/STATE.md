@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.5
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -45,16 +45,15 @@
 - 2026-08-14: Review PASS for checkpoint 2.3 after removing an output-format-specific Accept header and adding malformed-timing and transport-failure probes; pointer advanced to 2.4.
 - 2026-08-14: Implemented real codec-backed audio decoding/encoding, deterministic silence and RMS normalization, three-mode output assembly, safe sortable naming, dialogue segment extraction, and exclusive file creation for checkpoint 2.4; upgraded the fake provider to emit valid deterministic audio.
 - 2026-08-14: Review PASS for checkpoint 2.4 after a real default-MP3 fake-provider segment demo and explicit rejection of filename-shaped output directories; pointer advanced to 2.5.
+- 2026-08-14: Implemented versioned privacy-aware manifests for every file mode, global/file-relative timeline translation, alignment and dialogue attribution, configurable metadata retention, credential-value scrubbing, and exclusive manifest writes for checkpoint 2.5.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_audio.py tests/test_output.py tests/test_security.py -q` -> 22 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 147 passed; static checks pass.
-- manual core demo: default MP3 + auto dialogue + malicious scene ID -> 3 contained, decodable segment files.
-- path: src/elscript/audio.py
-- commits: `606c0d6`, `dc59bec` (checkpoint 2.4 implementation and review cleanup), pushed to `origin/main`.
+- `.venv/bin/python -m pytest tests/test_manifest.py -q` -> 7 passed; all three modes, request-boundary timing, privacy, safe write, and malformed metadata covered.
+- `.venv/bin/python -m pytest tests/test_security.py -k manifest -q` -> 1 passed; recursive sensitive context redacted.
+- full suite -> 156 passed; Ruff and strict `mypy src` pass; commit `982f9e9` pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

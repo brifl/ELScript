@@ -10,27 +10,26 @@
 ## Current focus
 
 - Stage: 1
-- Checkpoint: 1.2
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 1.3
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Convert files, directories, YAML text, and mappings into one canonical document with deterministic provenance-aware merge behavior.
+- Reject invalid or ambiguous ELScript documents before compilation with actionable paths and stable diagnostic codes.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/loading.py` for safe YAML parsing, source selection, recursive discovery, exclusions, and provenance.
-- `src/elscript/merge.py` for section-aware deep merge, stable list rules, scene uniqueness, and ordering.
-- Source and merge fixtures covering single-file, split-project, conflict, traversal-order, and invalid-input cases.
-- Unit and equivalence tests in `tests/test_loading.py` and `tests/test_merge.py`.
+- `src/elscript/schema.py` for top-level, render, pronunciation, preset, character, scene, entry, and export validation.
+- `src/elscript/validation.py` for version, character, preset, ID, range, and cross-reference checks.
+- Valid and invalid contract fixtures derived from the complete `DESIGN.md` example.
+- Schema and reference tests in `tests/test_schema.py` and `tests/test_validation.py`.
 
 ## Acceptance (current checkpoint)
 
-- [x] Exactly one of `source`, `yaml_text`, or `document` is required, and all three converge on the same canonical representation.
-- [x] YAML uses safe construction and rejects non-mapping roots with source-aware `InputError` diagnostics.
-- [x] Directory discovery is recursive, excludes hidden/output locations, and is independent of filesystem enumeration order.
-- [x] Mapping conflicts name the logical path and both sources; identical leaves merge and duplicate scene IDs fail.
-- [x] Final scene ordering follows explicit order, normalized source path, and in-file position deterministically.
+- [ ] The comprehensive example validates, including scalar speech, structured `say`, `set`, `with`, `reset`, `cue`, `tags`, `pause`, `note`, and `marker` forms.
+- [ ] Unknown core fields, unsupported schema versions, malformed values, and performance values outside defined ranges fail before rendering.
+- [ ] Unknown characters/presets, duplicate logical IDs, and missing required voice IDs produce actionable source/YAML paths.
+- [ ] The `api` escape hatch preserves structured provider data without accepting credentials or weakening core schema checks.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -39,14 +38,13 @@
 - 2026-08-14: Implemented Python 3.11+ packaging, immutable boundary models, the documented error hierarchy, public API signatures, CLI help, and contract tests; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
 - 2026-08-14: Review PASS for checkpoint 1.1; verified the built wheel in a fresh environment, reran tests/lint/types, probed source ambiguity and nested redaction, and auto-advanced to 1.2.
 - 2026-08-14: Implemented safe YAML/file/directory/mapping loading, provenance, deterministic discovery/order, section-aware merging, conflict diagnostics, and split-project fixtures for checkpoint 1.2.
+- 2026-08-14: Review PASS for checkpoint 1.2 after fixing appended-list provenance, rerunning the full suite/static checks, and rejecting an external-source symlink probe; auto-advanced to 1.3.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_loading.py tests/test_merge.py tests/test_pipeline_equivalence.py -q` -> 14 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 28 passed; static checks pass.
-- path: tests/fixtures/split_story/meta.yaml
+- path: .vibe/PLAN.md
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

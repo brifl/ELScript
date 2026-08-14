@@ -10,27 +10,26 @@
 ## Current focus
 
 - Stage: 2
-- Checkpoint: 2.3
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 2.4
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Execute planned speech/dialogue requests through ElevenLabs normal and timestamp endpoints with stable result and error translation.
+- Materialize valid `single`, `scene`, and `segment` audio outputs with deterministic timing, silence insertion, and path containment.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/providers/elevenlabs.py` implementing capability description, request execution, and metadata extraction.
-- Transport boundary supporting deterministic mocked HTTP/SDK contract tests.
-- Continuity support for context text and request stitching where compatible.
-- Adapter tests in `tests/test_elevenlabs_provider.py` with recorded request/response shapes and no live calls.
+- `src/elscript/audio.py` for decode, concatenation, explicit silence, format handling, and optional normalization.
+- `src/elscript/output.py` for naming, sanitization, collision detection, containment, directories, and overwrite policy.
+- Small deterministic audio fixtures and tests in `tests/test_audio.py` and `tests/test_output.py`.
 
 ## Acceptance (current checkpoint)
 
-- [ ] Speech and dialogue plans select the correct normal or timestamp operation and send every validated material option.
-- [ ] Audio bytes, request IDs, character alignment, normalized alignment, and voice segments are normalized into provider-neutral results.
-- [ ] Authentication, rate-limit, capability/account, and generation failures map to stable ELScript error categories with secrets redacted.
-- [ ] Continuity data is bounded to provider limits and disabled when incompatible with zero-retention behavior.
-- [ ] The automated suite performs no network calls and cannot incur provider charges.
+- [ ] Single and scene modes preserve authored order and insert explicit pauses within encoding tolerance.
+- [ ] Segment mode emits one valid file per audible speech segment and no standalone pause files.
+- [ ] Filenames use the documented script/scene/global ordinal/logical speaker rules and remain lexically sortable above 9,999 segments.
+- [ ] Malicious or colliding IDs cannot escape `output_dir`, and the default overwrite policy refuses unrelated existing files.
+- [ ] Output format/extension and optional loudness normalization are deterministic and reported as effective settings.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -42,15 +41,15 @@
 - 2026-08-14: Implemented versioned Eleven v3 semantic/audio-tag translation, boundary-safe pronunciation and native IPA, endpoint-scoped raw-option validation, provider request materialization, and pre-split prepared-text planning for checkpoint 2.2.
 - 2026-08-14: Review PASS for checkpoint 2.2 after adversarial checks for pre-split pronunciation, repeated expressive prefixes, indivisible IPA, endpoint option fallbacks, stable warnings, and secret-safe material identity; pointer advanced to 2.3.
 - 2026-08-14: Implemented the injectable ElevenLabs HTTP adapter, create/stream route selection, timestamp and dialogue metadata normalization, secret-safe failure mapping, and zero-retention-aware continuity validation for checkpoint 2.3.
+- 2026-08-14: Review PASS for checkpoint 2.3 after removing an output-format-specific Accept header and adding malformed-timing and transport-failure probes; pointer advanced to 2.4.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_elevenlabs_provider.py tests/test_elevenlabs_prompt.py -q` -> 35 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 128 passed; static checks pass.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 129 passed; static checks pass.
+- commits: `3cca706`, `a790ef8` (checkpoint 2.3 implementation and review hardening), pushed to `origin/main`.
 - path: src/elscript/providers/elevenlabs.py
-- commit: `3cca706` (`2.3: Implement ElevenLabs generation adapter`), pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

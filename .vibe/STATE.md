@@ -10,27 +10,27 @@
 ## Current focus
 
 - Stage: 2
-- Checkpoint: 2.5
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 2.6
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Write a privacy-aware manifest that lets downstream tools reconstruct files, segments, provider requests, timings, pauses, and markers.
+- Deliver the README render experience through one end-to-end pipeline for every source form and all file output modes.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/manifest.py` with versioned serializable manifest models.
-- Provider-local to output-global timing/alignment translation.
-- Configurable source-text and provider metadata retention.
-- Manifest contract tests in `tests/test_manifest.py`.
+- `src/elscript/api.py` implementing `render`, `render_yaml`, and `render_document` through the canonical pipeline.
+- `src/elscript/cli.py` file-render command with documented overrides, exit codes, warnings, and concise diagnostics.
+- End-to-end fake-provider fixtures for the comprehensive single-file and split-project examples.
+- Integration and CLI tests in `tests/test_render_integration.py` and `tests/test_cli.py`.
 
 ## Acceptance (current checkpoint)
 
-- [ ] Every output mode records generated files, durations, scenes, logical segments, provider requests, warnings, and cache status where applicable.
-- [ ] Segment records distinguish logical ID, ordinal, provider request ID, and resolved sanitized filename.
-- [ ] Pause and marker events retain authored order and best-known global time without requiring silent segment files.
-- [ ] Character/normalized alignment and dialogue voice segments translate correctly across assembled request boundaries.
-- [ ] Source text can be omitted and secrets are absent under recursive redaction checks.
+- [ ] File, directory, YAML-text, mapping, convenience functions, and CLI calls share identical compiled plans and output semantics.
+- [ ] The comprehensive example renders valid single, scene, and segment assets plus manifests using the fake provider.
+- [ ] CLI overrides obey configuration precedence and errors exit nonzero with phase, source/path context, and an actionable correction.
+- [ ] `RenderResult` exposes paths, duration, scenes, segments, provider-request count, and warnings without requiring manifest parsing.
+- [ ] CLI has no alternate parser/compiler/provider path and exposes no streaming switch.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -46,14 +46,15 @@
 - 2026-08-14: Implemented real codec-backed audio decoding/encoding, deterministic silence and RMS normalization, three-mode output assembly, safe sortable naming, dialogue segment extraction, and exclusive file creation for checkpoint 2.4; upgraded the fake provider to emit valid deterministic audio.
 - 2026-08-14: Review PASS for checkpoint 2.4 after a real default-MP3 fake-provider segment demo and explicit rejection of filename-shaped output directories; pointer advanced to 2.5.
 - 2026-08-14: Implemented versioned privacy-aware manifests for every file mode, global/file-relative timeline translation, alignment and dialogue attribution, configurable metadata retention, credential-value scrubbing, and exclusive manifest writes for checkpoint 2.5.
+- 2026-08-14: Review PASS for checkpoint 2.5 after verifying cumulative alignment offsets for a logical segment split across three requests and rejecting dialogue metadata that reverses authored input order; pointer advanced to 2.6.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_manifest.py -q` -> 7 passed; all three modes, request-boundary timing, privacy, safe write, and malformed metadata covered.
-- `.venv/bin/python -m pytest tests/test_security.py -k manifest -q` -> 1 passed; recursive sensitive context redacted.
-- full suite -> 156 passed; Ruff and strict `mypy src` pass; commit `982f9e9` pushed to `origin/main`.
+- `.venv/bin/python -m pytest tests/test_manifest.py tests/test_security.py -k manifest -q` -> 9 passed; all modes, privacy, safe writes, split-request offsets, and adversarial metadata covered.
+- full suite -> 157 passed; Ruff and strict `mypy src` pass.
+- commits: `982f9e9`, `d82379c` (checkpoint 2.5 product and review hardening), pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

@@ -10,26 +10,27 @@
 ## Current focus
 
 - Stage: 2
-- Checkpoint: 2.4
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 2.5
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Materialize valid `single`, `scene`, and `segment` audio outputs with deterministic timing, silence insertion, and path containment.
+- Write a privacy-aware manifest that lets downstream tools reconstruct files, segments, provider requests, timings, pauses, and markers.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/audio.py` for decode, concatenation, explicit silence, format handling, and optional normalization.
-- `src/elscript/output.py` for naming, sanitization, collision detection, containment, directories, and overwrite policy.
-- Small deterministic audio fixtures and tests in `tests/test_audio.py` and `tests/test_output.py`.
+- `src/elscript/manifest.py` with versioned serializable manifest models.
+- Provider-local to output-global timing/alignment translation.
+- Configurable source-text and provider metadata retention.
+- Manifest contract tests in `tests/test_manifest.py`.
 
 ## Acceptance (current checkpoint)
 
-- [ ] Single and scene modes preserve authored order and insert explicit pauses within encoding tolerance.
-- [ ] Segment mode emits one valid file per audible speech segment and no standalone pause files.
-- [ ] Filenames use the documented script/scene/global ordinal/logical speaker rules and remain lexically sortable above 9,999 segments.
-- [ ] Malicious or colliding IDs cannot escape `output_dir`, and the default overwrite policy refuses unrelated existing files.
-- [ ] Output format/extension and optional loudness normalization are deterministic and reported as effective settings.
+- [ ] Every output mode records generated files, durations, scenes, logical segments, provider requests, warnings, and cache status where applicable.
+- [ ] Segment records distinguish logical ID, ordinal, provider request ID, and resolved sanitized filename.
+- [ ] Pause and marker events retain authored order and best-known global time without requiring silent segment files.
+- [ ] Character/normalized alignment and dialogue voice segments translate correctly across assembled request boundaries.
+- [ ] Source text can be omitted and secrets are absent under recursive redaction checks.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -43,16 +44,17 @@
 - 2026-08-14: Implemented the injectable ElevenLabs HTTP adapter, create/stream route selection, timestamp and dialogue metadata normalization, secret-safe failure mapping, and zero-retention-aware continuity validation for checkpoint 2.3.
 - 2026-08-14: Review PASS for checkpoint 2.3 after removing an output-format-specific Accept header and adding malformed-timing and transport-failure probes; pointer advanced to 2.4.
 - 2026-08-14: Implemented real codec-backed audio decoding/encoding, deterministic silence and RMS normalization, three-mode output assembly, safe sortable naming, dialogue segment extraction, and exclusive file creation for checkpoint 2.4; upgraded the fake provider to emit valid deterministic audio.
+- 2026-08-14: Review PASS for checkpoint 2.4 after a real default-MP3 fake-provider segment demo and explicit rejection of filename-shaped output directories; pointer advanced to 2.5.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `.venv/bin/python -m pytest tests/test_audio.py tests/test_output.py -q` -> 16 passed.
-- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 146 passed; static checks pass.
-- `tests/test_security.py -k output_path -q` -> 1 passed.
+- `.venv/bin/python -m pytest tests/test_audio.py tests/test_output.py tests/test_security.py -q` -> 22 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 147 passed; static checks pass.
+- manual core demo: default MP3 + auto dialogue + malicious scene ID -> 3 contained, decodable segment files.
 - path: src/elscript/audio.py
-- commit: `606c0d6` (`2.4: Assemble and write safe audio outputs`), pushed to `origin/main`.
+- commits: `606c0d6`, `dc59bec` (checkpoint 2.4 implementation and review cleanup), pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

@@ -11,7 +11,7 @@
 
 - Stage: 1
 - Checkpoint: 1.1
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -27,22 +27,24 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] `pip install -e '.[dev]'` succeeds in a clean virtual environment on the supported Python baseline.
-- [ ] `import elscript` exposes `render`, `render_yaml`, `render_document`, `stream`, `astream`, `RenderResult`, and `AudioChunk` without importing provider SDK internals.
-- [ ] Error subclasses can be caught by input, merge, schema, compile, capability, provider, audio, and output category.
-- [ ] `elscript --help` documents file/directory input and file-render options and does not advertise CLI streaming.
+- [x] `pip install -e '.[dev]'` succeeds in a clean virtual environment on the supported Python baseline.
+- [x] `import elscript` exposes `render`, `render_yaml`, `render_document`, `stream`, `astream`, `RenderResult`, and `AudioChunk` without importing provider SDK internals.
+- [x] Error subclasses can be caught by input, merge, schema, compile, capability, provider, audio, and output category.
+- [x] `elscript --help` documents file/directory input and file-render options and does not advertise CLI streaming.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
 
 - 2026-08-14: Replaced the placeholder roadmap with three implementation stages derived from `DESIGN.md` and aligned the active pointer to checkpoint 1.1.
+- 2026-08-14: Implemented Python 3.11+ packaging, immutable boundary models, the documented error hierarchy, public API signatures, CLI help, and contract tests; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- path: `.vibe/PLAN.md` (3 milestones, 15 executable checkpoints, and a bounded verification backlog).
-- `python3 .codex/skills/vibe-loop/scripts/agentctl.py --repo-root . validate --format json --strict-complexity` -> pass; no errors or warnings.
+- `.venv/bin/python -m pytest tests/test_public_contracts.py -q` -> 14 passed.
+- `.venv/bin/ruff check src tests` and `.venv/bin/mypy src` -> pass.
+- path: dist/elscript-0.1.0a0-py3-none-any.whl
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

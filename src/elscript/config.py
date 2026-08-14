@@ -6,6 +6,7 @@ import os
 from collections.abc import Mapping
 from copy import deepcopy
 from dataclasses import asdict, dataclass, field, fields
+from enum import Enum
 from pathlib import Path
 from types import MappingProxyType
 from typing import Any
@@ -63,6 +64,29 @@ _BOOLEAN_KEYS = {
 }
 _INTEGER_KEYS = {"seed"}
 _OPTION_KEYS = frozenset(_DEFAULTS)
+_STRING_OPTION_KEYS = {
+    "language",
+    "model",
+    "output_format",
+    "output_mode",
+    "provider",
+    "render_mode",
+    "text_normalization",
+}
+_BOOLEAN_OPTION_KEYS = _BOOLEAN_KEYS | {
+    "include_source_text",
+    "manifest_enabled",
+}
+_CHUNKING_KEYS = {
+    "max_chars",
+    "prefer_scene_boundaries",
+    "prefer_utterance_boundaries",
+    "preserve_continuity",
+}
+
+
+class _ClearValue(Enum):
+    CLEAR = "clear"
 
 
 def _deep_overlay(target: dict[str, Any], incoming: Mapping[str, Any]) -> None:
@@ -102,11 +126,16 @@ def _environment_layer(environment: Mapping[str, str]) -> dict[str, Any]:
         value: Any = environment[environment_key]
         if config_key in _BOOLEAN_KEYS:
             value = _parse_boolean(environment_key, value)
-        elif config_key in _INTEGER_KEYS and value != "":
-            try:
-                value = int(value)
-            except ValueError as error:
-                raise InputError(f"{environment_key} must be an integer, got {value!r}") from error
+        elif config_key in _INTEGER_KEYS:
+            if value == "":
+                value = _ClearValue.CLEAR
+            else:
+                try:
+                    value = int(value)
+                except ValueError as error:
+                    raise InputError(
+                        f"{environment_key} must be an integer, got {value!r}"
+                    ) from error
         layer[config_key] = value
     return layer
 
@@ -126,20 +155,24 @@ def discover_env_file(
         return explicit
 
     working_directory = Path.cwd() if cwd is None else Path(cwd)
-    candidates: list[Path] = []
+    candidates: list[tuple[Path, Path]] = []
     if source is not None:
         source_path = Path(source)
         source_root = source_path if source_path.is_dir() else source_path.parent
-        candidates.append(source_root / ".env")
-    candidates.append(working_directory / ".env")
+        candidates.append((source_root / ".env", source_root.resolve()))
+    candidates.append((working_directory / ".env", working_directory.resolve()))
 
     seen: set[Path] = set()
-    for candidate in candidates:
+    for candidate, allowed_root in candidates:
         resolved = candidate.resolve()
         if resolved in seen:
             continue
         seen.add(resolved)
         if resolved.is_file():
+            if not resolved.is_relative_to(allowed_root):
+                raise InputError(
+                    f"Automatically discovered .env resolves outside its root: {candidate}"
+                )
             return resolved
     return None
 
@@ -190,6 +223,7 @@ def _options_layer(options: RenderOptions | Mapping[str, Any] | None) -> dict[st
     output_mode = result.get("output_mode")
     if isinstance(output_mode, OutputMode):
         result["output_mode"] = output_mode.value
+    _validate_explicit_options(result)
     return result
 
 
@@ -205,6 +239,40 @@ def _reject_credentials(value: object, *, path: str) -> None:
     elif isinstance(value, list):
         for index, child in enumerate(value):
             _reject_credentials(child, path=f"{path}[{index}]")
+
+
+def _validate_explicit_options(options: Mapping[str, Any]) -> None:
+    for key in _STRING_OPTION_KEYS:
+        value = options.get(key)
+        if value is not None and not isinstance(value, str):
+            raise InputError(f"Explicit option {key} must be a string")
+    for key in _BOOLEAN_OPTION_KEYS:
+        value = options.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise InputError(f"Explicit option {key} must be a boolean")
+    seed = options.get("seed")
+    if seed is not None and (isinstance(seed, bool) or not isinstance(seed, int)):
+        raise InputError("Explicit option seed must be an integer")
+    api = options.get("api")
+    if api is not None and not isinstance(api, Mapping):
+        raise InputError("Explicit option api must be a mapping")
+    chunking = options.get("chunking")
+    if chunking is None:
+        return
+    if not isinstance(chunking, Mapping):
+        raise InputError("Explicit option chunking must be a mapping")
+    unknown = set(chunking) - _CHUNKING_KEYS
+    if unknown:
+        raise InputError(f"Unknown explicit chunking option(s): {', '.join(sorted(unknown))}")
+    max_chars = chunking.get("max_chars")
+    if max_chars is not None and (
+        isinstance(max_chars, bool) or not isinstance(max_chars, int) or max_chars < 1
+    ):
+        raise InputError("Explicit chunking option max_chars must be a positive integer")
+    for key in _CHUNKING_KEYS - {"max_chars"}:
+        value = chunking.get(key)
+        if value is not None and not isinstance(value, bool):
+            raise InputError(f"Explicit chunking option {key} must be a boolean")
 
 
 @dataclass(frozen=True, slots=True)
@@ -223,7 +291,7 @@ class EffectiveConfig:
     output_format: str
     output_mode: str
     timestamps: bool
-    seed: int | str | None
+    seed: int | None
     text_normalization: str
     language_text_normalization: bool
     enable_logging: bool
@@ -291,6 +359,8 @@ def resolve_config(
     _deep_overlay(values, _environment_layer(environment))
     _deep_overlay(values, _yaml_layer(document))
     _deep_overlay(values, _options_layer(options))
+    if values["seed"] is _ClearValue.CLEAR:
+        values["seed"] = None
 
     chunking = values["chunking"]
     effective_chunking = EffectiveChunking(**chunking)

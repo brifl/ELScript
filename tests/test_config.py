@@ -75,6 +75,13 @@ def test_explicit_false_zero_and_empty_values_do_not_fall_through(tmp_path: Path
     assert config.seed == 0
     assert config.output_format == ""
 
+    cleared_seed = resolve_config(
+        _document(),
+        env_file=env_file,
+        process_env={"ELSCRIPT_SEED": ""},
+    )
+    assert cleared_seed.seed is None
+
 
 def test_dotenv_discovery_prefers_source_root_then_cwd(tmp_path: Path) -> None:
     project = tmp_path / "project"
@@ -118,6 +125,35 @@ def test_invalid_environment_values_are_actionable(tmp_path: Path) -> None:
 
     with pytest.raises(InputError, match="Explicit .env file does not exist"):
         discover_env_file(env_file=tmp_path / "missing.env")
+
+
+@pytest.mark.parametrize(
+    "options",
+    [
+        {"timestamps": "false"},
+        {"seed": True},
+        {"api": "not-a-mapping"},
+        {"chunking": {"max_chars": 0}},
+        {"chunking": {"unknown": True}},
+    ],
+)
+def test_mapping_options_cannot_bypass_runtime_types(options: dict[str, object]) -> None:
+    with pytest.raises(InputError):
+        resolve_config(_document(), process_env={}, options=options)
+
+
+def test_automatic_dotenv_cannot_escape_its_discovery_root(tmp_path: Path) -> None:
+    project = tmp_path / "project"
+    project.mkdir()
+    outside = tmp_path / "outside.env"
+    outside.write_text("ELSCRIPT_MODEL=outside", encoding="utf-8")
+    try:
+        (project / ".env").symlink_to(outside)
+    except OSError:
+        pytest.skip("symlinks are unavailable on this platform")
+
+    with pytest.raises(InputError, match="resolves outside its root"):
+        discover_env_file(source=project, cwd=tmp_path / "unused")
 
 
 def test_chunking_and_api_are_immutable_leaf_merged() -> None:

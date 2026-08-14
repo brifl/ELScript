@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.3
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -50,6 +50,7 @@
 - `.venv/bin/python -m pytest tests/test_elevenlabs_provider.py tests/test_elevenlabs_prompt.py -q` -> 35 passed.
 - `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 128 passed; static checks pass.
 - path: src/elscript/providers/elevenlabs.py
+- commit: `3cca706` (`2.3: Implement ElevenLabs generation adapter`), pushed to `origin/main`.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

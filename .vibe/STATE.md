@@ -11,7 +11,7 @@
 
 - Stage: 2
 - Checkpoint: 2.1
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,24 +26,26 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Planning honors scene boundaries, explicit pauses, model/settings/dictionary compatibility, output mode, and streaming mode.
-- [ ] Dialogue groups never exceed configured/provider character or unique-voice limits and preserve speaker/segment identity.
-- [ ] A logical segment split for provider limits retains ordered subparts under one logical ID.
-- [ ] Unsupported requested capabilities fail before generation unless an explicit coded degradation policy applies.
-- [ ] Identical inputs produce structurally identical plans.
+- [x] Planning honors scene boundaries, explicit pauses, model/settings/dictionary compatibility, output mode, and streaming mode.
+- [x] Dialogue groups never exceed configured/provider character or unique-voice limits and preserve speaker/segment identity.
+- [x] A logical segment split for provider limits retains ordered subparts under one logical ID.
+- [x] Unsupported requested capabilities fail before generation unless an explicit coded degradation policy applies.
+- [x] Identical inputs produce structurally identical plans.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
 
 - 2026-08-14: Consolidated completed Stage 1 into `.vibe/HISTORY.md`; the canonical load-to-compile front half passes 68 tests plus Ruff and strict mypy.
 - 2026-08-14: Advanced to checkpoint 2.1 for provider capability contracts and deterministic render planning; preserved unrelated pre-existing line-ending changes in `.gitignore`, `AGENTS.md`, and `DESIGN.md`.
+- 2026-08-14: Implemented endpoint-specific provider contracts, deterministic request grouping/splitting, pre-generation capability failures, ordered plan events, and a no-network deterministic fake provider for checkpoint 2.1.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
 <!-- Keep this short and relevant to acceptance. -->
 
-- `python3 .codex/skills/vibe-loop/scripts/agentctl.py --repo-root . validate --format json` -> valid at Stage 2 / checkpoint 2.1.
-- path: .vibe/HISTORY.md
+- `.venv/bin/python -m pytest tests/test_planner.py tests/test_capabilities.py -q` -> 17 passed.
+- `.venv/bin/python -m pytest -q`, Ruff, and strict mypy -> 85 passed; static checks pass.
+- path: src/elscript/planner.py
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

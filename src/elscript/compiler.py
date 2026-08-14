@@ -32,6 +32,7 @@ _LIBRARY_PERFORMANCE_DEFAULTS: dict[str, Any] = {
     "delivery": (),
     "accent": None,
 }
+_PERFORMANCE_FIELDS = frozenset(_LIBRARY_PERFORMANCE_DEFAULTS)
 _EVENT_KEYS = frozenset({"pause", "note", "marker"})
 
 
@@ -64,7 +65,11 @@ def _overlay(target: dict[str, Any], incoming: Mapping[str, Any]) -> None:
 def _state_values(state: PerformanceState | None) -> dict[str, Any]:
     if state is None:
         return {}
-    values = state.model_dump(exclude_none=True, by_alias=True)
+    values = {
+        key: value
+        for key, value in state.model_dump(exclude_none=True, by_alias=True).items()
+        if key in _PERFORMANCE_FIELDS
+    }
     if "delivery" in values:
         values["delivery"] = tuple(values["delivery"])
     return values
@@ -280,6 +285,25 @@ def _compile_payload(
                 tags=tags,
             )
         )
+    if parent_directions_pending:
+        drafts.insert(
+            0,
+            _SegmentDraft(
+                text=None,
+                performance=_resolved(parent_state),
+                provider_options=_provider_options(
+                    config,
+                    preset_api=preset_api,
+                    character_api=character_api,
+                    scene_render_api=scene_render_api,
+                    scene_api=scene_api,
+                    utterance_api=utterance_api,
+                    segment_api={},
+                ),
+                cues=parent_cues,
+                tags=parent_tags,
+            ),
+        )
     return drafts
 
 
@@ -320,7 +344,9 @@ def compile_document(document: ELScriptDocument, config: EffectiveConfig) -> Com
         initial_states = _state_snapshot(current_states)
         scene_events: list[TimelineItem] = []
         scene_render = (
-            scene.render.model_dump(exclude_unset=True, by_alias=True) if scene.render else {}
+            scene.render.model_dump(exclude_none=True, exclude_unset=True, by_alias=True)
+            if scene.render
+            else {}
         )
         scene_render_api = scene_render.get("api", {})
 

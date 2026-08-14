@@ -153,6 +153,51 @@ def test_structured_say_preserves_state_only_and_cue_only_items() -> None:
     assert compiled.final_character_states["MARA"].volume == "normal"
 
 
+def test_parent_cue_survives_a_state_only_structured_say() -> None:
+    compiled = _compile(
+        _base(
+            [
+                {
+                    "id": "scene",
+                    "script": [
+                        {
+                            "MARA": {
+                                "cue": "sighs",
+                                "say": [{"set": {"emotion": "tired"}}],
+                            }
+                        },
+                        {"MARA": "After"},
+                    ],
+                }
+            ]
+        )
+    )
+
+    assert [segment.text for segment in compiled.segments] == [None, "After"]
+    assert compiled.segments[0].cues == ("sighs",)
+    assert compiled.segments[0].performance.emotion == "calm"
+    assert compiled.segments[1].performance.emotion == "tired"
+
+
+def test_explicit_null_scene_render_values_fall_through() -> None:
+    document = _base(
+        [
+            {
+                "id": "scene",
+                "render": {"model": None, "seed": None},
+                "script": [{"MARA": "Hello"}],
+            }
+        ]
+    )
+    validated = validate_document(load_document(document=document))
+    config = resolve_config(validated, process_env={})
+
+    segment = compile_document(validated, config).segments[0]
+
+    assert segment.model == config.model
+    assert segment.render_settings["seed"] is None
+
+
 def test_non_speech_events_keep_order_without_consuming_ordinals() -> None:
     compiled = _compile(
         _base(

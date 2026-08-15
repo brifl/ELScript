@@ -10,27 +10,27 @@
 ## Current focus
 
 - Stage: 3
-- Checkpoint: 3.2
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 3.3
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Reuse provider results only when every material audio input and continuity dependency matches.
+- Make failures phase-specific, secret-safe, and operationally actionable across untrusted input, provider faults, and partial writes.
 
 ## Deliverables (current checkpoint)
 
-- `src/elscript/cache.py` for canonical fingerprints, atomic cache records, validation, and lookup.
-- Request-context dependency tracking for grouping, neighbors, and stitching invalidation.
-- Cache observability in render results and manifests.
-- Cache hit/miss/corruption/invalidation tests in `tests/test_cache.py`.
+- Stable warning-code registry and phase-aware diagnostic formatting.
+- Atomic render/output cleanup behavior for cancellation and mid-pipeline failures.
+- Adversarial security and fault-injection coverage in `tests/test_security.py` and `tests/test_failures.py`.
+- `docs/troubleshooting.md` mapping common diagnostics to corrections.
 
 ## Acceptance (current checkpoint)
 
-- [ ] Fingerprints include the design-mandated provider, prompt, settings, semantic translation, pronunciation, seed, language, normalization, context, and adapter versions.
-- [ ] Fingerprints exclude credentials, output directories/names, and unrelated metadata.
-- [ ] Exact repeats avoid provider calls and expose cache hits without changing output semantics.
-- [ ] Segment or grouping changes invalidate every continuity-dependent request while preserving unrelated reusable requests.
-- [ ] Corrupt/incomplete entries are ignored safely and writes are atomic under concurrent readers.
+- [ ] Each documented pipeline phase maps failures to a stable category/code with available source, YAML path, scene, character, segment, provider, and correction context.
+- [ ] Warnings cover only recoverable degradation; conflicts, unknown references, unsupported required intent, credentials, and voices remain errors.
+- [ ] Malicious YAML, aliases, logical IDs, filenames, and serialized metadata cannot instantiate objects, traverse paths, or leak credentials.
+- [ ] Provider failure or cancellation leaves no apparently complete manifest or corrupt final output and does not damage prior renders.
+- [ ] Troubleshooting guidance is verified against emitted codes and current CLI behavior.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -44,6 +44,7 @@
 - 2026-08-14: Review PASS for checkpoint 3.1 after 180-test regression evidence and targeted production transport, close, cancellation, malformed-data, and redaction probes; auto-advanced to checkpoint 3.2.
 - 2026-08-14: Began checkpoint 3.2 with request-granular content identity, conservative immediate-neighbor continuity dependencies, and a local atomic cache shared by sibling output directories.
 - 2026-08-14: Implemented checkpoint 3.2 in `7a921fb`; validated provider results publish atomically only after output/manifest checks, exact repeats avoid provider calls, and manifests/results expose cache outcomes.
+- 2026-08-14: Review PASS for checkpoint 3.2 after 190-test regression evidence and cross-instance atomicity, corruption repair, invalid-result publication, grouping, stitching, and selective-invalidation probes; auto-advanced to checkpoint 3.3.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -59,6 +60,8 @@
 - `7a921fb` — content-addressed request/segment identities, validated atomic records, cache-aware rendering, and incremental-regeneration coverage.
 - `.venv/bin/python -m pytest tests/test_cache.py -q` — 8 passed; incremental integration probe passed with call counts 4 initial + 3 continuity-dependent misses.
 - `.venv/bin/python -m pytest -q` — 190 passed; Ruff and strict `mypy src` passed.
+- Checkpoint 3.2 review: 8 cache tests and the incremental integration probe passed; `8f364ed` verifies separate cache instances under concurrent replacement.
+- Next: `.venv/bin/python -m pytest tests/test_security.py tests/test_failures.py -q` for checkpoint 3.3.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

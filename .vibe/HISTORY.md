@@ -21,7 +21,12 @@
 
 ## Resolved issues
 
-- None recorded.
+- ISSUE-305 — Selected `elscript-audio` as the owned public distribution identity while
+  retaining the `elscript` Python package and command; metadata, docs, artifact checks,
+  and CI were synchronized in `71f3627`. Publication remains explicitly deferred.
+- ISSUE-306 — Separate cache instances could observe transient misses/corruption during
+  concurrent replacement on a Windows-mounted workspace. `ce8d02d` shares locks per
+  cache root; the contention test passed 10 consecutive runs and the full suite passed.
 
 ## Process notes
 

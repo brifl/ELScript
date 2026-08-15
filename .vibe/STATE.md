@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.4
-- Status: BLOCKED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -55,6 +55,9 @@
 - 2026-08-14: Began checkpoint 3.4 by auditing README examples, distribution contents, build isolation, public metadata, documentation gaps, and cross-platform CI/release checks.
 - 2026-08-14: Implemented checkpoint 3.4 in `7a5662e`; public examples/reference docs, scoped package metadata, artifact verification, changelog/release guidance, and Linux/macOS/Windows CI now form one executable release surface.
 - 2026-08-14: Review FAIL/BLOCKED: the `elscript` distribution name is already owned on PyPI by an unrelated Eliot programming-language project, so the documented install command and publication target require an operator naming/ownership decision.
+- 2026-08-14: Operator selected `elscript-audio` as the distribution name and explicitly deferred publication; the import package and CLI remain `elscript`.
+- 2026-08-14: Resolved ISSUE-305 in `71f3627` with synchronized metadata, install guidance, artifact checks, CI naming, and a publication deferral.
+- 2026-08-14: Full-suite verification exposed a reproducible cross-instance cache replacement race on the Windows-mounted workspace; resolved ISSUE-306 in `ce8d02d` with one shared in-process lock per cache root.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -90,7 +93,10 @@
 - `98509f2` — PyPI-safe absolute README links plus Twine validation in the release workflow; pushed to `origin/main`.
 - PyPI project lookup — `https://pypi.org/project/elscript/` is an unrelated `0.0.1` project owned by `EliotScript` (released 2022-01-23).
 - Candidate lookup — PyPI returned no project for `elscript-audio`, `elscript-tts`, or `elevenlabs-elscript` on 2026-08-14; names remain unreserved until successfully registered.
-- Next: operator must resolve ISSUE-305 before package names, install docs, artifacts, and release metadata can be signed off.
+- `71f3627` — `elscript-audio` distribution metadata/docs/CI/checker; publication remains explicitly deferred.
+- Isolated build/Twine/check/install smoke — verified `elscript_audio-0.1.0a0-py3-none-any.whl`, `elscript_audio-0.1.0a0.tar.gz`, installed distribution metadata, `import elscript`, CLI help, and one fake render.
+- `ce8d02d` — sibling `RenderCache` instances now share a per-root lock; the previously flaky contention test passed 10 consecutive runs.
+- `.venv/bin/python -m pytest -q` — 210 passed after distribution rename and cache concurrency hardening; Ruff and strict mypy passed.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
@@ -103,13 +109,7 @@
 ## Active issues
 <!-- Keep only active issues here. Move resolved items to HISTORY.md. -->
 
-- [ ] ISSUE-305: Select an owned Python distribution name
-  - Impact: BLOCKER
-  - Status: DECISION_REQUIRED
-  - Owner: human
-  - Unblock Condition: Confirm control/transfer of the existing `elscript` PyPI project or select a unique distribution name; the `elscript` import package and CLI may remain unchanged if desired.
-  - Evidence Needed: PyPI ownership confirmation or an operator-approved unique name followed by updated metadata/docs/artifacts and a passing build/install review.
-  - Notes: Do not publish or advertise `pip install elscript` until this is resolved; that name currently installs unrelated software. Recommended fallback: use distribution name `elscript-audio` while retaining the `elscript` import package and CLI command; PyPI currently returns no project for that candidate, but availability is not reserved.
+- None.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->
@@ -119,3 +119,4 @@
 - 2026-08-14: Work directly on the current `main` branch and commit/push completed units, per operator instruction.
 - 2026-08-14: Auto streaming uses independently attributable speech requests; explicit dialogue streams buffer one provider request for timestamp-based segment attribution, while HTTP response consumption remains incremental and closeable.
 - 2026-08-14: File renders share a local content cache at `<output-parent>/.cache/elscript`; streaming stays write-free, and cache keys exclude logical/output identity while including material provider and continuity inputs.
+- 2026-08-14: Use `elscript-audio` as the distribution name while retaining the `elscript` import package and CLI command; do not publish, tag, or create a release until a new explicit operator instruction authorizes it.

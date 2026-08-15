@@ -13,6 +13,7 @@ from elscript.audio import decode_audio
 
 ROOT = Path(__file__).parents[1]
 README = ROOT / "README.md"
+CI_WORKFLOW = ROOT / ".github" / "workflows" / "ci.yml"
 SIGNAL_FILE = ROOT / "tests" / "fixtures" / "signal_below.yaml"
 SIGNAL_PROJECT = ROOT / "tests" / "fixtures" / "signal_below"
 FAKE_OPTIONS = {
@@ -104,9 +105,35 @@ def test_package_metadata_version_and_public_files_are_synchronized() -> None:
     assert metadata["name"] == "elscript-audio"
     assert metadata["version"] == elscript.__version__
     assert metadata["requires-python"] == ">=3.11"
+    classifiers = set(metadata["classifiers"])
+    assert {
+        f"Programming Language :: Python :: 3.{minor}" for minor in range(11, 15)
+    } <= classifiers
     assert metadata["scripts"] == {"elscript": "elscript.cli:main"}
     readme = README.read_text(encoding="utf-8")
     assert "No PyPI release has been published yet" in " ".join(readme.split())
     assert not re.search(r"^pip install elscript$", readme, re.MULTILINE)
     assert (ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
     assert "## [0.1.0a0]" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")
+
+
+def test_ci_covers_supported_runtimes_without_release_authority() -> None:
+    workflow = CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert 'python-version: ["3.11", "3.12", "3.13", "3.14"]' in workflow
+    assert 'python-version: "3.14"' in workflow
+    assert workflow.count("actions/checkout@v6") == 2
+    assert workflow.count("actions/setup-python@v6") == 2
+    assert workflow.count("actions/upload-artifact@v6") == 1
+    assert "permissions:\n  contents: read" in workflow
+    assert "pip show elscript-audio" in workflow
+    assert not any(
+        forbidden in workflow
+        for forbidden in (
+            "ELEVENLABS_API_KEY",
+            "pypa/gh-action-pypi-publish",
+            "twine upload",
+            "contents: write",
+            "id-token: write",
+        )
+    )

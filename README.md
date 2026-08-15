@@ -37,9 +37,9 @@ ELScript can render a single YAML file, logically merge a directory of YAML file
 
 ## Installation
 
-ELScript requires Python 3.11 or newer. It is packaged as `elscript-audio`; the Python
-package and command remain `elscript`. No PyPI release has been published yet, and
-`pip install elscript` refers to an unrelated project.
+ELScript requires Python 3.11 or newer and is tested on CPython 3.11 through 3.14. It is
+packaged as `elscript-audio`; the Python package and command remain `elscript`. No PyPI
+release has been published yet, and `pip install elscript` refers to an unrelated project.
 
 Install the current checkout locally:
 

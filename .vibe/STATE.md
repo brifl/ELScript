@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.2
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -42,6 +42,8 @@
 - 2026-08-14: Review FAIL: the urllib production transport buffers `response.read()` before provider iteration, so real ElevenLabs calls do not yet provide network-level streaming or close propagation.
 - 2026-08-14: Resolved ISSUE-301 in `ed77a8d` with incremental urllib reads, arbitrary-boundary timestamp JSON decoding, one-chunk final lookahead, and socket-close propagation.
 - 2026-08-14: Review PASS for checkpoint 3.1 after 180-test regression evidence and targeted production transport, close, cancellation, malformed-data, and redaction probes; auto-advanced to checkpoint 3.2.
+- 2026-08-14: Began checkpoint 3.2 with request-granular content identity, conservative immediate-neighbor continuity dependencies, and a local atomic cache shared by sibling output directories.
+- 2026-08-14: Implemented checkpoint 3.2 in `7a921fb`; validated provider results publish atomically only after output/manifest checks, exact repeats avoid provider calls, and manifests/results expose cache outcomes.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -54,7 +56,9 @@
 - `ed77a8d` — streaming transport reads only on demand and closes its underlying response; direct transport tests verify first read before EOF and bounded provider lookahead.
 - `.venv/bin/python -m pytest -q` — 180 passed after transport hardening.
 - Checkpoint 3.1 review: 26 focused streaming/provider/source-form tests passed; `57eca2f` adds the final HTTP failure/cleanup probe.
-- Next: `.venv/bin/python -m pytest tests/test_cache.py -q` for checkpoint 3.2.
+- `7a921fb` — content-addressed request/segment identities, validated atomic records, cache-aware rendering, and incremental-regeneration coverage.
+- `.venv/bin/python -m pytest tests/test_cache.py -q` — 8 passed; incremental integration probe passed with call counts 4 initial + 3 continuity-dependent misses.
+- `.venv/bin/python -m pytest -q` — 190 passed; Ruff and strict `mypy src` passed.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
@@ -76,3 +80,4 @@
 - 2026-08-14: Keep deterministic fake-provider acceptance mandatory; defer paid credentialed ElevenLabs smoke tests until credentials and charge approval are available.
 - 2026-08-14: Work directly on the current `main` branch and commit/push completed units, per operator instruction.
 - 2026-08-14: Auto streaming uses independently attributable speech requests; explicit dialogue streams buffer one provider request for timestamp-based segment attribution, while HTTP response consumption remains incremental and closeable.
+- 2026-08-14: File renders share a local content cache at `<output-parent>/.cache/elscript`; streaming stays write-free, and cache keys exclude logical/output identity while including material provider and continuity inputs.

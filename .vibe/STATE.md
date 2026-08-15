@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.3
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -46,6 +46,7 @@
 - 2026-08-14: Implemented checkpoint 3.2 in `7a921fb`; validated provider results publish atomically only after output/manifest checks, exact repeats avoid provider calls, and manifests/results expose cache outcomes.
 - 2026-08-14: Review PASS for checkpoint 3.2 after 190-test regression evidence and cross-instance atomicity, corruption repair, invalid-result publication, grouping, stitching, and selective-invalidation probes; auto-advanced to checkpoint 3.3.
 - 2026-08-14: Began checkpoint 3.3 by inventorying all error/warning codes, phase coverage, secret surfaces, untrusted YAML/cache/path inputs, and output publication/cancellation boundaries.
+- 2026-08-14: Implemented checkpoint 3.3 in `b41873a` with a stable diagnostic registry, phase/code/correction CLI output, bounded safe YAML structures, atomic exclusive publication, cancellation cleanup, adversarial tests, and troubleshooting guidance.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -62,7 +63,10 @@
 - `.venv/bin/python -m pytest tests/test_cache.py -q` — 8 passed; incremental integration probe passed with call counts 4 initial + 3 continuity-dependent misses.
 - `.venv/bin/python -m pytest -q` — 190 passed; Ruff and strict `mypy src` passed.
 - Checkpoint 3.2 review: 8 cache tests and the incremental integration probe passed; `8f364ed` verifies separate cache instances under concurrent replacement.
-- Next: `.venv/bin/python -m pytest tests/test_security.py tests/test_failures.py -q` for checkpoint 3.3.
+- `b41873a` — diagnostic/security/failure-recovery implementation; pushed to `origin/main`.
+- `.venv/bin/python -m pytest tests/test_security.py tests/test_failures.py tests/test_cli.py -q` — 23 passed.
+- `.venv/bin/python -m pytest -q` — 202 passed; Ruff and strict `mypy src` passed.
+- Next: independent review of checkpoint 3.3 acceptance and operator-facing diagnostics.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

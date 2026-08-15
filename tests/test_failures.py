@@ -176,6 +176,41 @@ def test_dialogue_stream_decode_failure_retains_all_request_attribution(
     }
 
 
+def test_unexpected_stream_exception_is_stable_attributed_and_secret_free(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class BrokenStreamProvider(FakeProvider):
+        def stream(self, request: ProviderRequest) -> Iterator[GenerationChunk]:
+            raise RuntimeError("adapter leaked stream-secret")
+
+    monkeypatch.setattr(api_module, "FakeProvider", BrokenStreamProvider)
+
+    with pytest.raises(GenerationError) as caught:
+        tuple(stream(document=_document()))
+
+    assert caught.value.context == {
+        "provider": "fake",
+        "request_id": "request.0001",
+        "scene_id": "one",
+        "segment_id": "first",
+        "character_id": "MARA",
+    }
+    assert "stream-secret" not in str(caught.value)
+
+
+def test_stream_cancellation_is_not_normalized_as_provider_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class CancelledStreamProvider(FakeProvider):
+        def stream(self, request: ProviderRequest) -> Iterator[GenerationChunk]:
+            raise KeyboardInterrupt
+
+    monkeypatch.setattr(api_module, "FakeProvider", CancelledStreamProvider)
+
+    with pytest.raises(KeyboardInterrupt):
+        tuple(stream(document=_document()))
+
+
 def test_partial_provider_failure_does_not_touch_prior_render_or_publish_cache(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

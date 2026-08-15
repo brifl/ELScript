@@ -30,11 +30,20 @@ def _provider_chunks(
     provider: Provider,
     request: ProviderRequest,
 ) -> Iterator[GenerationChunk]:
-    iterator = provider.stream(request)
     try:
-        yield from iterator
-    finally:
-        _close(iterator)
+        iterator = provider.stream(request)
+        try:
+            yield from iterator
+        finally:
+            _close(iterator)
+    except ELScriptError as error:
+        error.enrich_context(request_diagnostic_context(provider.provider_id, request))
+        raise
+    except Exception as error:
+        raise GenerationError(
+            "Provider streaming failed unexpectedly",
+            context=request_diagnostic_context(provider.provider_id, request),
+        ) from error
 
 
 def _chunk_metadata(chunk: GenerationChunk, request: ProviderRequest) -> dict[str, Any]:

@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.3
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -45,6 +45,7 @@
 - 2026-08-14: Began checkpoint 3.2 with request-granular content identity, conservative immediate-neighbor continuity dependencies, and a local atomic cache shared by sibling output directories.
 - 2026-08-14: Implemented checkpoint 3.2 in `7a921fb`; validated provider results publish atomically only after output/manifest checks, exact repeats avoid provider calls, and manifests/results expose cache outcomes.
 - 2026-08-14: Review PASS for checkpoint 3.2 after 190-test regression evidence and cross-instance atomicity, corruption repair, invalid-result publication, grouping, stitching, and selective-invalidation probes; auto-advanced to checkpoint 3.3.
+- 2026-08-14: Began checkpoint 3.3 by inventorying all error/warning codes, phase coverage, secret surfaces, untrusted YAML/cache/path inputs, and output publication/cancellation boundaries.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->

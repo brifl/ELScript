@@ -15,6 +15,8 @@ from .errors import InputError, InvalidYamlError, SourceNotFoundError
 from .merge import merge_documents
 
 _YAML_SUFFIXES = frozenset({".yaml", ".yml"})
+_MAX_STRUCTURE_DEPTH = 100
+_MAX_STRUCTURE_NODES = 100_000
 _IGNORED_DIRECTORY_NAMES = frozenset(
     {
         ".codex",
@@ -91,6 +93,41 @@ def _collect_provenance(
     return provenance
 
 
+def _check_structure(
+    value: object,
+    *,
+    active: set[int] | None = None,
+    count: list[int] | None = None,
+    depth: int = 0,
+) -> None:
+    """Reject recursive or resource-exhausting alias graphs before copying/walking."""
+
+    if depth > _MAX_STRUCTURE_DEPTH:
+        raise ValueError("ELScript input exceeds the maximum nesting depth")
+    counter = [0] if count is None else count
+    counter[0] += 1
+    if counter[0] > _MAX_STRUCTURE_NODES:
+        raise ValueError("ELScript input exceeds the maximum structure size")
+    if not isinstance(value, (Mapping, list, tuple)):
+        return
+    identity = id(value)
+    ancestors = set() if active is None else active
+    if identity in ancestors:
+        raise ValueError("Recursive YAML aliases are not supported")
+    ancestors.add(identity)
+    try:
+        children = value.values() if isinstance(value, Mapping) else value
+        for child in children:
+            _check_structure(
+                child,
+                active=ancestors,
+                count=counter,
+                depth=depth + 1,
+            )
+    finally:
+        ancestors.remove(identity)
+
+
 def _parse_yaml(yaml_text: str, *, source_name: str) -> LoadedDocument:
     try:
         parsed = yaml.load(yaml_text, Loader=_ELScriptSafeLoader)
@@ -101,13 +138,23 @@ def _parse_yaml(yaml_text: str, *, source_name: str) -> LoadedDocument:
             line=mark.line + 1 if mark is not None else None,
             column=mark.column + 1 if mark is not None else None,
         )
-        raise InvalidYamlError(str(error), location=location) from error
+        raise InvalidYamlError(
+            "ELScript source contains invalid YAML syntax",
+            location=location,
+        ) from error
 
     if not isinstance(parsed, Mapping):
         raise InputError(
             "ELScript YAML must contain a mapping at the document root",
             location=SourceLocation(source=source_name, yaml_path="$"),
         )
+    try:
+        _check_structure(parsed)
+    except ValueError as error:
+        raise InvalidYamlError(
+            str(error),
+            location=SourceLocation(source=source_name, yaml_path="$"),
+        ) from error
 
     document = deepcopy(dict(parsed))
     return LoadedDocument(
@@ -174,6 +221,13 @@ def discover_yaml_files(
 
 
 def _load_mapping(document: Mapping[str, Any]) -> LoadedDocument:
+    try:
+        _check_structure(document)
+    except ValueError as error:
+        raise InputError(
+            str(error),
+            location=SourceLocation(source="<document>", yaml_path="$"),
+        ) from error
     copied = deepcopy(dict(document))
     source_name = "<document>"
     return LoadedDocument(

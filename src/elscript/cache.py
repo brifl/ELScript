@@ -20,7 +20,7 @@ from types import MappingProxyType
 from typing import Any
 
 from .audio import decode_audio
-from .errors import CapabilityError, ELScriptError
+from .errors import CapabilityError, ELScriptError, GenerationError
 from .planner import RenderPlan
 from .providers.base import (
     CharacterAlignment,
@@ -504,7 +504,7 @@ class RenderCache:
                     output.flush()
                     os.fsync(output.fileno())
                 os.replace(temporary, path)
-            except Exception:
+            except BaseException:
                 with suppress(OSError):
                     os.close(descriptor)
                 with suppress(OSError):
@@ -533,7 +533,15 @@ def generate_with_cache(
             results[request.id] = lookup.result
             statuses[request.id] = "hit"
             continue
-        result = provider_generate(request)
+        try:
+            result = provider_generate(request)
+        except ELScriptError:
+            raise
+        except Exception as error:
+            raise GenerationError(
+                "Provider generation failed unexpectedly",
+                context={"provider": plan.provider_id, "request_id": request.id},
+            ) from error
         results[request.id] = result
         statuses[request.id] = lookup.status
         generated.append(request.id)

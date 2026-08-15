@@ -10,13 +10,8 @@ from enum import StrEnum
 from types import MappingProxyType
 from typing import Any
 
-from ..domain import (
-    CompiledScript,
-    Diagnostic,
-    DiagnosticSeverity,
-    PipelinePhase,
-    SpeechSegment,
-)
+from ..diagnostics import make_warning
+from ..domain import CompiledScript, Diagnostic, SpeechSegment
 from ..errors import CapabilityError, ProviderLimitError, UnsupportedModelFeatureError
 from ..redaction import is_sensitive_key
 from ..schema import Pronunciation, PronunciationTerm
@@ -178,11 +173,9 @@ def _warning(
     *,
     field: str,
 ) -> Diagnostic:
-    return Diagnostic(
-        code=code,
-        message=message,
-        severity=DiagnosticSeverity.WARNING,
-        phase=PipelinePhase.CAPABILITY_VALIDATION,
+    return make_warning(
+        code,
+        message,
         context={"segment_id": segment.id, "model": segment.model, "field": field},
     )
 
@@ -299,13 +292,13 @@ def _semantic_tags(segment: SpeechSegment) -> tuple[tuple[str, ...], tuple[Diagn
                 )
             )
 
-    tags.extend(
-        _validate_tag(value, segment=segment, field="delivery") for value in state.delivery
-    )
+    tags.extend(_validate_tag(value, segment=segment, field="delivery") for value in state.delivery)
     if state.accent is not None:
         accent = state.accent
-        accent_tag = f"strong {accent}" if accent.casefold().endswith("accent") else (
-            f"strong {accent} accent"
+        accent_tag = (
+            f"strong {accent}"
+            if accent.casefold().endswith("accent")
+            else (f"strong {accent} accent")
         )
         tags.append(_validate_tag(accent_tag, segment=segment, field="accent"))
         warnings.append(
@@ -327,9 +320,7 @@ def _ipa_text(value: str, *, term: str) -> str:
     if len(ipa) >= 2 and ipa.startswith("/") and ipa.endswith("/"):
         ipa = ipa[1:-1]
     if not ipa or "/" in ipa or any(character in ipa for character in "\r\n"):
-        raise CapabilityError(
-            f"Pronunciation term {term!r} has invalid Eleven v3 IPA syntax"
-        )
+        raise CapabilityError(f"Pronunciation term {term!r} has invalid Eleven v3 IPA syntax")
     return f"/{ipa}/"
 
 
@@ -484,9 +475,7 @@ def _number(value: Any, *, path: str, minimum: float, maximum: float) -> None:
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         raise CapabilityError(f"Provider option {path} must be numeric")
     if not math.isfinite(float(value)) or not minimum <= value <= maximum:
-        raise CapabilityError(
-            f"Provider option {path} must be between {minimum} and {maximum}"
-        )
+        raise CapabilityError(f"Provider option {path} must be between {minimum} and {maximum}")
 
 
 def _validate_voice_settings(value: Any) -> None:
@@ -523,10 +512,7 @@ def _validate_continuity(value: Any, *, name: str) -> None:
 
 
 def _validate_provider_options(request: ProviderRequest) -> dict[str, Any]:
-    options = {
-        str(key): _plain(value)
-        for key, value in request.provider_options.items()
-    }
+    options = {str(key): _plain(value) for key, value in request.provider_options.items()}
     allowed = (
         _SPEECH_PROVIDER_OPTIONS
         if request.kind is RequestKind.SPEECH
@@ -598,9 +584,7 @@ def build_elevenlabs_request(
         )
     versions = {part.translation_version for part in request.parts}
     if versions != {TRANSLATION_VERSION}:
-        raise CapabilityError(
-            f"Request {request.id!r} was not prepared by {TRANSLATION_VERSION}"
-        )
+        raise CapabilityError(f"Request {request.id!r} was not prepared by {TRANSLATION_VERSION}")
     if any(part.text is None or not part.text for part in request.parts):
         raise CapabilityError(f"Request {request.id!r} contains empty provider text")
     if endpoint.supported_models is not None and request.model not in endpoint.supported_models:
@@ -608,9 +592,7 @@ def build_elevenlabs_request(
             f"Model {request.model!r} does not support {request.kind.value} requests"
         )
     translated_features = frozenset(
-        feature
-        for part in request.parts
-        for feature in part.features_used
+        feature for part in request.parts for feature in part.features_used
     )
     if translated_features - endpoint.features:
         raise UnsupportedModelFeatureError(
@@ -649,9 +631,7 @@ def build_elevenlabs_request(
             for item in request.dictionary_locators
         ],
         "seed": seed,
-        "apply_text_normalization": request.render_settings.get(
-            "text_normalization", "auto"
-        ),
+        "apply_text_normalization": request.render_settings.get("text_normalization", "auto"),
     }
     if request.language is not None:
         body["language_code"] = request.language
@@ -674,16 +654,13 @@ def build_elevenlabs_request(
                 "ElevenLabs dialogue does not support language text normalization"
             )
         body["inputs"] = [
-            {"text": part.text, "voice_id": part.segment.voice_id}
-            for part in request.parts
+            {"text": part.text, "voice_id": part.segment.voice_id} for part in request.parts
         ]
         body.update(options)
         voice_id = None
 
     warnings: list[Diagnostic] = []
-    language_normalization = bool(
-        request.render_settings.get("language_text_normalization", False)
-    )
+    language_normalization = bool(request.render_settings.get("language_text_normalization", False))
     if request.kind is RequestKind.SPEECH and language_normalization:
         if request.language is not None and request.language.casefold() not in {"ja", "jpn"}:
             raise UnsupportedModelFeatureError(
@@ -691,24 +668,20 @@ def build_elevenlabs_request(
             )
         if request.language is None:
             warnings.append(
-                Diagnostic(
-                    code="ELEVENLABS_LANGUAGE_NORMALIZATION_UNVERIFIED",
-                    message=(
+                make_warning(
+                    "ELEVENLABS_LANGUAGE_NORMALIZATION_UNVERIFIED",
+                    (
                         "Language text normalization support cannot be pre-verified without "
                         "a language code"
                     ),
-                    severity=DiagnosticSeverity.WARNING,
-                    phase=PipelinePhase.CAPABILITY_VALIDATION,
                     context={"request_id": request.id, "model": request.model},
                 )
             )
     if seed is not None:
         warnings.append(
-            Diagnostic(
-                code="ELEVENLABS_SEED_BEST_EFFORT",
-                message="ElevenLabs treats seed determinism as best-effort",
-                severity=DiagnosticSeverity.WARNING,
-                phase=PipelinePhase.CAPABILITY_VALIDATION,
+            make_warning(
+                "ELEVENLABS_SEED_BEST_EFFORT",
+                "ElevenLabs treats seed determinism as best-effort",
                 context={"request_id": request.id, "model": request.model},
             )
         )

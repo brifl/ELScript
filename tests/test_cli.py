@@ -102,7 +102,7 @@ def test_cli_errors_include_phase_source_context_and_actionable_message(
     missing_result = _run_cli(missing, "--output", tmp_path / "missing-output")
 
     assert missing_result.returncode == 1
-    assert "[source_discovery]" in missing_result.stderr
+    assert "[source_discovery/SOURCE_NOT_FOUND]" in missing_result.stderr
     assert "SOURCE_NOT_FOUND" in missing_result.stderr
     assert str(missing) in missing_result.stderr
     assert "does not exist" in missing_result.stderr
@@ -115,7 +115,7 @@ def test_cli_errors_include_phase_source_context_and_actionable_message(
     invalid_result = _run_cli(invalid, "--output", tmp_path / "invalid-output")
 
     assert invalid_result.returncode == 1
-    assert "[reference_validation]" in invalid_result.stderr
+    assert "[reference_validation/UNKNOWN_CHARACTER]" in invalid_result.stderr
     assert "UNKNOWN_CHARACTER" in invalid_result.stderr
     assert str(invalid) in invalid_result.stderr
     assert "GHOST" in invalid_result.stderr

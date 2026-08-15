@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import os
 import re
+import tempfile
 import unicodedata
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
@@ -402,18 +403,41 @@ def _target_paths(root: Path, targets: Sequence[OutputTarget]) -> tuple[Path, ..
     return paths
 
 
+def _write_bytes_exclusive(path: Path, payload: bytes) -> None:
+    """Publish one complete file atomically without replacing an existing path."""
+
+    descriptor, temporary_name = tempfile.mkstemp(
+        dir=path.parent,
+        prefix=f".{path.name}-",
+        suffix=".tmp",
+    )
+    temporary = Path(temporary_name)
+    try:
+        with os.fdopen(descriptor, "wb") as output:
+            output.write(payload)
+            output.flush()
+            os.fsync(output.fileno())
+        os.link(temporary, path)
+    finally:
+        with suppress(OSError):
+            os.close(descriptor)
+        with suppress(OSError):
+            temporary.unlink()
+
+
 def _write_all(paths: Sequence[Path], payloads: Sequence[bytes]) -> None:
     created: list[Path] = []
     try:
         for path, payload in zip(paths, payloads, strict=True):
-            with path.open("xb") as output:
-                created.append(path)
-                output.write(payload)
-    except (OSError, ValueError) as error:
+            _write_bytes_exclusive(path, payload)
+            created.append(path)
+    except BaseException as error:
         for path in created:
             with suppress(OSError):
                 path.unlink()
-        raise WriteError("Audio outputs could not be written") from error
+        if isinstance(error, (OSError, ValueError)):
+            raise WriteError("Audio outputs could not be written") from error
+        raise
 
 
 def preflight_render_outputs(

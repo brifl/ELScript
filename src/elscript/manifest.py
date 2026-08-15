@@ -7,7 +7,6 @@ import math
 import os
 from collections import defaultdict
 from collections.abc import Mapping, Sequence
-from contextlib import suppress
 from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any, Literal, cast
@@ -24,7 +23,11 @@ from .domain import (
     PauseEvent,
 )
 from .errors import AssemblyError, WriteError
-from .output import OutputWriteResult, sanitize_filename_component
+from .output import (
+    OutputWriteResult,
+    _write_bytes_exclusive,
+    sanitize_filename_component,
+)
 from .planner import RenderPlan
 from .providers.base import (
     CharacterAlignment,
@@ -983,21 +986,15 @@ def write_manifest(
     """Exclusively write a deterministic UTF-8 JSON manifest beside audio files."""
 
     path = preflight_manifest_output(manifest.script_id, output_dir)
-    payload = f"{manifest.to_json()}\n"
-    created = False
+    payload = f"{manifest.to_json()}\n".encode()
     try:
-        with path.open("x", encoding="utf-8", newline="\n") as output:
-            created = True
-            output.write(payload)
+        _write_bytes_exclusive(path, payload)
     except FileExistsError as error:
         raise WriteError(
             "Refusing to overwrite an existing manifest",
             context={"path": str(path)},
         ) from error
     except OSError as error:
-        if created:
-            with suppress(OSError):
-                path.unlink()
         raise WriteError("Manifest could not be written") from error
     return path
 

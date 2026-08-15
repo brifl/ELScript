@@ -256,7 +256,7 @@ def render(
         manifest_path = (
             write_manifest(manifest, preflight.root) if prepared.config.manifest_enabled else None
         )
-    except Exception:
+    except BaseException:
         for path in outputs.files:
             with suppress(OSError):
                 path.unlink()

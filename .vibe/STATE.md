@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.1
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -39,6 +39,7 @@
 - 2026-08-14: Began the canonical sync/async stream implementation with typed provider metadata, ordered timeline events, demand-driven iteration, and explicit dialogue attribution.
 - 2026-08-14: Implemented checkpoint 3.1 in `0b831cf`; auto-mode streams independently attributable speech requests, explicit dialogue is split using provider voice timing, and async iteration closes active work on cancellation.
 - 2026-08-14: Review FAIL: the urllib production transport buffers `response.read()` before provider iteration, so real ElevenLabs calls do not yet provide network-level streaming or close propagation.
+- 2026-08-14: Resolved ISSUE-301 in `ed77a8d` with incremental urllib reads, arbitrary-boundary timestamp JSON decoding, one-chunk final lookahead, and socket-close propagation.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -48,7 +49,8 @@
 - `0b831cf` — structured sync/async streaming implementation and acceptance tests.
 - `.venv/bin/python -m pytest -q` — 178 passed; Ruff and strict `mypy src` passed.
 - Comprehensive trace — 36 ordered chunks: 30 attributed audio chunks and 6 pause/marker/note events.
-- Review finding: `UrllibElevenLabsTransport.send()` reads the complete body before `ElevenLabsProvider.stream()` can yield; focused fake-provider backpressure tests cannot verify the production network path.
+- `ed77a8d` — streaming transport reads only on demand and closes its underlying response; direct transport tests verify first read before EOF and bounded provider lookahead.
+- `.venv/bin/python -m pytest -q` — 180 passed after transport hardening.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
@@ -61,13 +63,7 @@
 ## Active issues
 <!-- Keep only active issues here. Move resolved items to HISTORY.md. -->
 
-- [ ] ISSUE-301: Production transport buffers streaming responses
-  - Impact: MAJOR
-  - Status: IN_PROGRESS
-  - Owner: agent
-  - Unblock Condition: Streaming operations consume an incrementally readable transport response and closing/cancelling the public iterator closes that response.
-  - Evidence Needed: Transport-level tests prove first-chunk delivery before EOF, bounded read-ahead, and close propagation; checkpoint streaming tests and full suite pass.
-  - Notes: Non-streaming requests should retain their existing buffered response path and error translation.
+- None.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->

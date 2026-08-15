@@ -9,13 +9,15 @@ import json
 import math
 import os
 import tempfile
+import weakref
+from _thread import RLock
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from contextlib import suppress
 from dataclasses import asdict, dataclass
 from enum import Enum
 from pathlib import Path
-from threading import RLock
+from threading import Lock
 from types import MappingProxyType
 from typing import Any
 
@@ -34,6 +36,18 @@ CACHE_IDENTITY_VERSION = "elscript-render-v1"
 CACHE_RECORD_VERSION = 1
 _MAX_CACHE_ENTRY_BYTES = 128 * 1024 * 1024
 _FINGERPRINT_PREFIX = "sha256:"
+_CACHE_LOCKS_GUARD = Lock()
+_CACHE_LOCKS: weakref.WeakValueDictionary[str, RLock] = weakref.WeakValueDictionary()
+
+
+def _shared_cache_lock(root: Path) -> RLock:
+    key = os.path.normcase(str(root))
+    with _CACHE_LOCKS_GUARD:
+        lock = _CACHE_LOCKS.get(key)
+        if lock is None:
+            lock = RLock()
+            _CACHE_LOCKS[key] = lock
+        return lock
 
 
 @dataclass(frozen=True, slots=True)
@@ -398,7 +412,7 @@ class RenderCache:
 
     def __init__(self, root: Path) -> None:
         self.root = root.absolute()
-        self._lock = RLock()
+        self._lock = _shared_cache_lock(self.root)
 
     def _bucket(self, fingerprint: str, *, create: bool) -> Path | None:
         digest = _fingerprint_digest(fingerprint)

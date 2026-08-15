@@ -9,28 +9,29 @@
 
 ## Current focus
 
-- Stage: 3
-- Checkpoint: 3.4
-- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Stage: 4
+- Checkpoint: 4.1
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Make the designed public contract installable, discoverable, reproducible, and ready for a first versioned release.
+- Prove the existing public package on CPython 3.11–3.14 across Linux, macOS, and Windows using current Node 24-based GitHub actions.
 
 ## Deliverables (current checkpoint)
 
-- README examples synchronized with tested public API/CLI behavior and supported ElevenLabs caveats.
-- `docs/` reference pages for ELScript 1.0 syntax, configuration, manifests, streaming, and provider capabilities.
-- Build metadata, license/package contents, changelog, and release checklist.
-- Documentation/example/package tests in `tests/test_docs_examples.py` and the build workflow.
+- `.github/workflows/ci.yml` updated to current action majors and CPython 3.11–3.14.
+- `pyproject.toml` classifiers and public support wording synchronized with the tested matrix.
+- Focused metadata/workflow assertions that keep distribution identity and release permissions stable.
+- Remote CI evidence for every OS/interpreter combination and the artifact-install job.
 
 ## Acceptance (current checkpoint)
 
-- [x] Every README quick-start and comprehensive example is executed by tests against the canonical pipeline.
-- [x] Public docs clearly separate portable semantics, provider escape hatches, supported degradation, and out-of-scope 1.0 features.
-- [x] `sdist` and wheel build cleanly, contain required documentation/package assets, and install/import in a fresh environment.
-- [x] Static/type/test checks pass from documented commands without repository-local undeclared state.
-- [x] The release checklist includes the opt-in credentialed smoke and current provider-capability review without making paid calls part of default CI.
+- [ ] CI runs the full suite on CPython 3.11, 3.12, 3.13, and 3.14 on Linux, macOS, and Windows.
+- [ ] Checkout, Python setup, and artifact upload use supported Node 24-based action majors with no Node 20 deprecation annotations.
+- [ ] The build job creates, checks, installs, imports, and invokes the `elscript-audio` wheel on Python 3.14.
+- [ ] Project metadata names every tested Python minor without changing the `elscript` import or CLI command.
+- [ ] The workflow retains read-only contents permission and contains no package-index upload, tag, release, credential, or paid-provider step.
+- [ ] Local full-suite, Ruff, strict mypy, build, Twine, and distribution-content checks remain green.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -59,6 +60,7 @@
 - 2026-08-14: Resolved ISSUE-305 in `71f3627` with synchronized metadata, install guidance, artifact checks, CI naming, and a publication deferral.
 - 2026-08-14: Full-suite verification exposed a reproducible cross-instance cache replacement race on the Windows-mounted workspace; resolved ISSUE-306 in `ce8d02d` with one shared in-process lock per cache root.
 - 2026-08-14: Review PASS for checkpoint 3.4; package identity, docs, artifacts, isolated installation, deterministic examples, cache concurrency, and publication boundaries satisfy the release-readiness contract. The active plan is exhausted.
+- 2026-08-14: Designed Stage 4 from repository and live CI evidence: the six-job Python 3.11/3.12 matrix passes, but every job warns about deprecated Node 20 action runtimes and Python 3.13/3.14 are not exercised despite the open-ended `>=3.11` requirement.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -105,7 +107,7 @@
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
 - [x] RUN_CONTEXT_CAPTURE
-- [ ] STAGE_DESIGNED
+- [x] STAGE_DESIGNED
 - [ ] MAINTENANCE_CYCLE_DONE
 - [ ] RETROSPECTIVE_DONE
 - [x] PROCESS_IMPROVEMENTS_DONE

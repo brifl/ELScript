@@ -3,7 +3,7 @@ requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [project]
-name = "elscript"
+name = "elscript-audio"
 version = "0.1.0a0"
 description = "Render structured, expressive, multi-character scripts to speech."
 readme = "README.md"

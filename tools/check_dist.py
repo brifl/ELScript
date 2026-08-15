@@ -5,17 +5,25 @@ from __future__ import annotations
 import argparse
 import re
 import tarfile
+import tomllib
 import zipfile
 from pathlib import Path
 
-_VERSION_PATTERN = re.compile(r'^version\s*=\s*"([^"]+)"', re.MULTILINE)
+
+def _project_identity(repo_root: Path) -> tuple[str, str]:
+    document = tomllib.loads((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
+    project = document.get("project")
+    if not isinstance(project, dict):
+        raise ValueError("pyproject.toml does not contain [project] metadata")
+    name = project.get("name")
+    version = project.get("version")
+    if not isinstance(name, str) or not isinstance(version, str):
+        raise ValueError("pyproject.toml does not contain a static project name and version")
+    return name, version
 
 
-def _version(repo_root: Path) -> str:
-    match = _VERSION_PATTERN.search((repo_root / "pyproject.toml").read_text(encoding="utf-8"))
-    if match is None:
-        raise ValueError("pyproject.toml does not contain a static project version")
-    return match.group(1)
+def _archive_name(project_name: str) -> str:
+    return re.sub(r"[-_.]+", "_", project_name).lower()
 
 
 def _one(paths: tuple[Path, ...], kind: str) -> Path:
@@ -26,13 +34,14 @@ def _one(paths: tuple[Path, ...], kind: str) -> Path:
 
 
 def verify(dist_dir: Path, *, repo_root: Path) -> tuple[Path, Path]:
-    version = _version(repo_root)
-    wheel = _one(tuple(dist_dir.glob(f"elscript-{version}-*.whl")), "wheel")
-    sdist = _one(tuple(dist_dir.glob(f"elscript-{version}.tar.gz")), "sdist")
-    prefix = f"elscript-{version}"
+    project_name, version = _project_identity(repo_root)
+    prefix = f"{_archive_name(project_name)}-{version}"
+    wheel = _one(tuple(dist_dir.glob(f"{prefix}-*.whl")), "wheel")
+    sdist = _one(tuple(dist_dir.glob(f"{prefix}.tar.gz")), "sdist")
 
     with zipfile.ZipFile(wheel) as archive:
         wheel_names = set(archive.namelist())
+        metadata = archive.read(f"{prefix}.dist-info/METADATA").decode("utf-8")
     wheel_required = {
         "elscript/__init__.py",
         "elscript/py.typed",
@@ -43,6 +52,8 @@ def verify(dist_dir: Path, *, repo_root: Path) -> tuple[Path, Path]:
     missing_wheel = sorted(wheel_required - wheel_names)
     if missing_wheel:
         raise ValueError(f"wheel is missing: {', '.join(missing_wheel)}")
+    if f"Name: {project_name}\n" not in metadata:
+        raise ValueError(f"wheel metadata does not identify {project_name}")
 
     with tarfile.open(sdist) as archive:
         sdist_names = set(archive.getnames())

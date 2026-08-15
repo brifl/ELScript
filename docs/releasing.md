@@ -4,6 +4,10 @@ This checklist is intentionally manual at the publication boundary. CI verifies 
 candidate; publishing, tagging, and paid provider calls require an explicit operator
 decision.
 
+The distribution name is `elscript-audio`; the import package and console command are
+both `elscript`. Publication is currently deferred. Section 5 requires a new explicit
+operator instruction and is not authorized by completing the earlier sections.
+
 ## 1. Candidate metadata
 
 - [ ] Choose the version and update both `pyproject.toml` and
@@ -12,7 +16,8 @@ decision.
   dated release section.
 - [ ] Confirm the Python requirement, classifiers, dependencies, license, project URLs,
   and console entry point.
-- [ ] Check that the distribution name is available/owned on the intended index.
+- [ ] Confirm that `elscript-audio` is available/owned on the intended index immediately
+  before publication.
 
 ## 2. Provider capability review
 
@@ -60,7 +65,7 @@ Do not make paid calls in default CI.
 If credentials, approval, account access, or owned voice IDs are unavailable, record the
 smoke as deferred; never substitute an unapproved call.
 
-## 5. Publication
+## 5. Publication (deferred until explicitly authorized)
 
 - [ ] Review `git diff`, `git status`, and the exact candidate commit.
 - [ ] Create and sign the version tag according to project policy.

@@ -101,9 +101,12 @@ def test_readme_repository_links_and_release_docs_exist() -> None:
 def test_package_metadata_version_and_public_files_are_synchronized() -> None:
     metadata = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]
 
-    assert metadata["name"] == "elscript"
+    assert metadata["name"] == "elscript-audio"
     assert metadata["version"] == elscript.__version__
     assert metadata["requires-python"] == ">=3.11"
     assert metadata["scripts"] == {"elscript": "elscript.cli:main"}
+    readme = README.read_text(encoding="utf-8")
+    assert "No PyPI release has\nbeen published yet" in readme
+    assert not re.search(r"^pip install elscript$", readme, re.MULTILINE)
     assert (ROOT / "LICENSE").read_text(encoding="utf-8").startswith("MIT License")
     assert "## [0.1.0a0]" in (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

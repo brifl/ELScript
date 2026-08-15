@@ -48,10 +48,11 @@ jobs:
         run: |
           python -m venv /tmp/elscript-wheel-check
           /tmp/elscript-wheel-check/bin/python -m pip install dist/*.whl
+          /tmp/elscript-wheel-check/bin/python -m pip show elscript-audio
           /tmp/elscript-wheel-check/bin/python -c "import elscript; print(elscript.__version__)"
           /tmp/elscript-wheel-check/bin/elscript --help
       - uses: actions/upload-artifact@v4
         with:
-          name: elscript-distributions
+          name: elscript-audio-distributions
           path: dist/*
           if-no-files-found: error

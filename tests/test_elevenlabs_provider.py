@@ -409,3 +409,42 @@ def test_urllib_stream_reads_incrementally_and_closes_socket(
     assert incoming.reads == 1
     response.close()
     assert incoming.closed
+
+
+def test_streaming_http_failure_is_redacted_and_closes_response() -> None:
+    class ClosingChunks:
+        def __init__(self, value: bytes) -> None:
+            self.value = iter((value,))
+            self.closed = False
+
+        def __iter__(self) -> ClosingChunks:
+            return self
+
+        def __next__(self) -> bytes:
+            return next(self.value)
+
+        def close(self) -> None:
+            self.closed = True
+
+    credential = "stream-secret"
+    body = ClosingChunks(
+        json.dumps(
+            {
+                "detail": {
+                    "status": "concurrent_limit_exceeded",
+                    "message": f"failure echoed {credential}",
+                }
+            }
+        ).encode()
+    )
+    response = TransportStreamResponse(status=429, headers={}, chunks=body)
+    provider = ElevenLabsProvider(
+        credential,
+        transport=RecordingTransport(response),
+    )
+
+    with pytest.raises(RateLimitError) as caught:
+        tuple(provider.stream(replace(_planned_request(), streaming=True)))
+
+    assert credential not in str(caught.value)
+    assert body.closed

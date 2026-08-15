@@ -6,6 +6,7 @@ from dataclasses import replace
 
 import pytest
 
+import elscript.providers.elevenlabs as elevenlabs_module
 from elscript.compiler import compile_document
 from elscript.config import resolve_config
 from elscript.errors import (
@@ -24,13 +25,15 @@ from elscript.providers.elevenlabs import (
     ElevenLabsProvider,
     TransportRequest,
     TransportResponse,
+    TransportStreamResponse,
+    UrllibElevenLabsTransport,
 )
 from elscript.providers.elevenlabs_prompt import elevenlabs_capabilities, prepare_elevenlabs
 from elscript.validation import validate_document
 
 
 class RecordingTransport:
-    def __init__(self, *responses: TransportResponse) -> None:
+    def __init__(self, *responses: TransportResponse | TransportStreamResponse) -> None:
         self.responses = list(responses)
         self.requests: list[TransportRequest] = []
 
@@ -38,7 +41,19 @@ class RecordingTransport:
         self.requests.append(request)
         if not self.responses:
             raise AssertionError("unexpected transport call")
-        return self.responses.pop(0)
+        response = self.responses.pop(0)
+        if not isinstance(response, TransportResponse):
+            raise AssertionError("expected a buffered transport response")
+        return response
+
+    def stream(self, request: TransportRequest) -> TransportStreamResponse:
+        self.requests.append(request)
+        if not self.responses:
+            raise AssertionError("unexpected transport call")
+        response = self.responses.pop(0)
+        if not isinstance(response, TransportStreamResponse):
+            raise AssertionError("expected a streaming transport response")
+        return response
 
 
 class FailingTransport:
@@ -92,6 +107,17 @@ def _planned_request(
 
 def _response(*, status: int = 200, body: bytes = b"audio") -> TransportResponse:
     return TransportResponse(status=status, headers={"Request-ID": "provider-request"}, body=body)
+
+
+def _stream_response(
+    *chunks: bytes,
+    status: int = 200,
+) -> TransportStreamResponse:
+    return TransportStreamResponse(
+        status=status,
+        headers={"Request-ID": "provider-request"},
+        chunks=iter(chunks),
+    )
 
 
 def _timestamp_body(*, dialogue: bool = False, audio: bytes = b"timed-audio") -> bytes:
@@ -305,7 +331,7 @@ def test_timestamp_stream_chunks_are_translated_without_live_network() -> None:
     body = b"\n".join(
         [_timestamp_body(dialogue=True, audio=b"first"), _timestamp_body(audio=b"second")]
     )
-    transport = RecordingTransport(_response(body=body))
+    transport = RecordingTransport(_stream_response(body[:17], body[17:93], body[93:]))
 
     chunks = tuple(ElevenLabsProvider("key", transport=transport).stream(planned))
 
@@ -313,3 +339,73 @@ def test_timestamp_stream_chunks_are_translated_without_live_network() -> None:
     assert [chunk.final for chunk in chunks] == [False, True]
     assert "/v1/text-to-dialogue/stream/with-timestamps?" in transport.requests[0].url
     assert chunks[0].voice_segments[1].part_index == 1
+
+
+def test_audio_stream_has_bounded_read_ahead_and_propagates_close() -> None:
+    class PullCountingChunks:
+        def __init__(self) -> None:
+            self.values = iter((b"first", b"second", b"third"))
+            self.pulls = 0
+            self.closed = False
+
+        def __iter__(self) -> PullCountingChunks:
+            return self
+
+        def __next__(self) -> bytes:
+            self.pulls += 1
+            return next(self.values)
+
+        def close(self) -> None:
+            self.closed = True
+
+    planned = replace(_planned_request(), streaming=True)
+    body = PullCountingChunks()
+    response = TransportStreamResponse(
+        status=200,
+        headers={"Request-ID": "provider-request"},
+        chunks=body,
+    )
+    iterator = ElevenLabsProvider("key", transport=RecordingTransport(response)).stream(planned)
+
+    assert body.pulls == 0
+    first = next(iterator)
+    assert first.audio == b"first"
+    assert not first.final
+    assert body.pulls == 2
+    iterator.close()
+    assert body.closed
+
+
+def test_urllib_stream_reads_incrementally_and_closes_socket(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class IncrementalResponse:
+        status = 200
+        headers = {"Request-ID": "provider-request"}
+
+        def __init__(self) -> None:
+            self.values = iter((b"first", b"second", b""))
+            self.reads = 0
+            self.closed = False
+
+        def read(self, size: int = -1) -> bytes:
+            raise AssertionError("streaming must not call buffered read()")
+
+        def read1(self, size: int) -> bytes:
+            self.reads += 1
+            return next(self.values)
+
+        def close(self) -> None:
+            self.closed = True
+
+    incoming = IncrementalResponse()
+    monkeypatch.setattr(elevenlabs_module, "urlopen", lambda *args, **kwargs: incoming)
+    request = TransportRequest("POST", "https://example.test", {}, b"request")
+
+    response = UrllibElevenLabsTransport().stream(request)
+
+    assert incoming.reads == 0
+    assert next(response.chunks) == b"first"
+    assert incoming.reads == 1
+    response.close()
+    assert incoming.closed

@@ -20,6 +20,7 @@ from .elevenlabs import (
     ElevenLabsTransport,
     TransportRequest,
     TransportResponse,
+    TransportStreamResponse,
     UrllibElevenLabsTransport,
 )
 from .fake import FakeProvider, fake_capabilities
@@ -42,6 +43,7 @@ __all__ = [
     "RequestKind",
     "TransportRequest",
     "TransportResponse",
+    "TransportStreamResponse",
     "UrllibElevenLabsTransport",
     "VoiceSegmentMetadata",
     "fake_capabilities",

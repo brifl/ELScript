@@ -4,11 +4,12 @@ from __future__ import annotations
 
 import base64
 import binascii
+import codecs
 import json
 import math
-from collections.abc import Iterator, Mapping
+from collections.abc import Callable, Iterator, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Protocol
+from typing import Any, Protocol, TypeVar
 from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
@@ -72,6 +73,7 @@ _CAPABILITY_ERROR_TERMS = (
     "voice",
 )
 _LIMIT_ERROR_TERMS = ("character_limit", "limit_exceeded", "too_many")
+_T = TypeVar("_T")
 
 
 @dataclass(frozen=True, slots=True)
@@ -91,10 +93,35 @@ class TransportResponse:
     body: bytes = field(repr=False)
 
 
+@dataclass(slots=True)
+class TransportStreamResponse:
+    """Incremental HTTP response with explicit resource ownership."""
+
+    status: int
+    headers: Mapping[str, str]
+    chunks: Iterator[bytes] = field(repr=False)
+    close_callback: Callable[[], None] | None = field(default=None, repr=False)
+    _closed: bool = field(default=False, init=False, repr=False)
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        self._closed = True
+        close_chunks = getattr(self.chunks, "close", None)
+        try:
+            if callable(close_chunks):
+                close_chunks()
+        finally:
+            if self.close_callback is not None:
+                self.close_callback()
+
+
 class ElevenLabsTransport(Protocol):
     """Injectable boundary used to guarantee charge-free adapter tests."""
 
     def send(self, request: TransportRequest) -> TransportResponse: ...
+
+    def stream(self, request: TransportRequest) -> TransportStreamResponse: ...
 
 
 class UrllibElevenLabsTransport:
@@ -106,12 +133,7 @@ class UrllibElevenLabsTransport:
         self._timeout_seconds = timeout_seconds
 
     def send(self, request: TransportRequest) -> TransportResponse:
-        outgoing = Request(
-            request.url,
-            data=request.body,
-            headers=dict(request.headers),
-            method=request.method,
-        )
+        outgoing = self._outgoing(request)
         try:
             with urlopen(outgoing, timeout=self._timeout_seconds) as response:  # noqa: S310
                 return TransportResponse(
@@ -127,6 +149,47 @@ class UrllibElevenLabsTransport:
             )
         except URLError as error:
             raise OSError("ElevenLabs transport failed") from error
+
+    def stream(self, request: TransportRequest) -> TransportStreamResponse:
+        outgoing = self._outgoing(request)
+        try:
+            response = urlopen(outgoing, timeout=self._timeout_seconds)  # noqa: S310
+        except HTTPError as error:
+            status = error.code
+            headers = dict(error.headers.items()) if error.headers is not None else {}
+            try:
+                body = error.read()
+            finally:
+                error.close()
+            return TransportStreamResponse(
+                status=status,
+                headers=headers,
+                chunks=iter((body,)),
+            )
+        except URLError as error:
+            raise OSError("ElevenLabs transport failed") from error
+
+        def chunks() -> Iterator[bytes]:
+            read_available = getattr(response, "read1", response.read)
+            while chunk := read_available(64 * 1024):
+                yield chunk
+
+        return TransportStreamResponse(
+            status=response.status,
+            headers=dict(response.headers.items()),
+            chunks=chunks(),
+            close_callback=response.close,
+        )
+
+    @staticmethod
+    def _outgoing(request: TransportRequest) -> Request:
+        outgoing = Request(
+            request.url,
+            data=request.body,
+            headers=dict(request.headers),
+            method=request.method,
+        )
+        return outgoing
 
 
 def _operation_path(request: ElevenLabsRequest) -> str:
@@ -182,6 +245,53 @@ def _json_object(body: bytes, *, response_name: str) -> Mapping[str, Any]:
     if not isinstance(value, Mapping):
         raise GenerationError(f"ElevenLabs returned a non-object {response_name}")
     return value
+
+
+def _stream_json_objects(chunks: Iterator[bytes]) -> Iterator[Mapping[str, Any]]:
+    """Decode adjacent or whitespace-delimited JSON objects across transport chunks."""
+
+    text_decoder = codecs.getincrementaldecoder("utf-8")()
+    json_decoder = json.JSONDecoder()
+    buffered = ""
+
+    def decoded() -> Iterator[Mapping[str, Any]]:
+        nonlocal buffered
+        while True:
+            buffered = buffered.lstrip()
+            if not buffered:
+                return
+            try:
+                value, end = json_decoder.raw_decode(buffered)
+            except json.JSONDecodeError:
+                return
+            if not isinstance(value, Mapping):
+                raise GenerationError("ElevenLabs returned a non-object timestamp stream chunk")
+            buffered = buffered[end:]
+            yield value
+
+    try:
+        for chunk in chunks:
+            buffered += text_decoder.decode(chunk)
+            yield from decoded()
+        buffered += text_decoder.decode(b"", final=True)
+    except UnicodeDecodeError as error:
+        raise GenerationError("ElevenLabs returned invalid timestamp stream JSON") from error
+    yield from decoded()
+    if buffered.strip():
+        raise GenerationError("ElevenLabs returned invalid timestamp stream JSON")
+
+
+def _mark_last(items: Iterator[_T]) -> Iterator[tuple[_T, bool]]:
+    """Attach an EOF-derived final flag with at most one item of read-ahead."""
+
+    try:
+        current = next(items)
+    except StopIteration:
+        return
+    for following in items:
+        yield current, False
+        current = following
+    yield current, True
 
 
 def _audio(value: Any) -> bytes:
@@ -441,6 +551,29 @@ class ElevenLabsProvider:
         )
         return materialized, response
 
+    def _open_stream(
+        self, planned: ProviderRequest
+    ) -> tuple[ElevenLabsRequest, TransportStreamResponse]:
+        materialized, outgoing = self._transport_request(planned)
+        try:
+            response = self._transport.stream(outgoing)
+        except OSError as error:
+            raise GenerationError(
+                "ElevenLabs transport failed",
+                context={"provider": self.provider_id, "request_id": planned.id},
+            ) from error
+        if not 200 <= response.status < 300:
+            try:
+                body = b"".join(response.chunks)
+            finally:
+                response.close()
+            _raise_for_status(
+                TransportResponse(response.status, response.headers, body),
+                request_id=planned.id,
+                credential=self._credential,
+            )
+        return materialized, response
+
     def generate(self, request: ProviderRequest) -> GenerationResult:
         if request.streaming:
             raise CapabilityError("Use ElevenLabsProvider.stream() for a streaming request")
@@ -475,52 +608,56 @@ class ElevenLabsProvider:
     def stream(self, request: ProviderRequest) -> Iterator[GenerationChunk]:
         if not request.streaming:
             raise CapabilityError("Streaming requires a plan created with streaming=True")
-        materialized, response = self._send(request)
-        request_id = _header(response.headers, _REQUEST_ID_HEADERS)
-        if materialized.operation not in _STREAM_OPERATIONS:
-            raise CapabilityError("ElevenLabs streaming request selected a non-stream operation")
-        if materialized.operation not in _TIMESTAMP_OPERATIONS:
-            if not response.body:
-                raise GenerationError("ElevenLabs returned an empty audio stream")
-            yield GenerationChunk(
-                audio=response.body,
-                output_format=request.output_format,
-                request_id=request_id,
-                final=True,
-                metadata={"provider": self.provider_id, "operation": materialized.operation.value},
-            )
-            return
-
-        payloads = self._stream_payloads(response.body)
-        for index, payload in enumerate(payloads):
-            audio, alignment, normalized_alignment, voice_segments = _timestamp_fields(payload)
-            yield GenerationChunk(
-                audio=audio,
-                output_format=request.output_format,
-                request_id=request_id,
-                final=index == len(payloads) - 1,
-                alignment=alignment,
-                normalized_alignment=normalized_alignment,
-                voice_segments=voice_segments,
-                metadata={
-                    "provider": self.provider_id,
-                    "operation": materialized.operation.value,
-                },
-            )
-
-    @staticmethod
-    def _stream_payloads(body: bytes) -> tuple[Mapping[str, Any], ...]:
+        response: TransportStreamResponse | None = None
         try:
-            single = json.loads(body)
-        except (UnicodeDecodeError, json.JSONDecodeError):
-            single = None
-        if isinstance(single, Mapping):
-            return (single,)
-        payloads = tuple(
-            _json_object(line, response_name="timestamp stream chunk")
-            for line in body.splitlines()
-            if line.strip()
-        )
-        if not payloads:
-            raise GenerationError("ElevenLabs returned an empty timestamp stream")
-        return payloads
+            materialized, response = self._open_stream(request)
+            request_id = _header(response.headers, _REQUEST_ID_HEADERS)
+            if materialized.operation not in _STREAM_OPERATIONS:
+                raise CapabilityError(
+                    "ElevenLabs streaming request selected a non-stream operation"
+                )
+            emitted = False
+            if materialized.operation not in _TIMESTAMP_OPERATIONS:
+                audio_chunks = (chunk for chunk in response.chunks if chunk)
+                for audio, final in _mark_last(audio_chunks):
+                    emitted = True
+                    yield GenerationChunk(
+                        audio=audio,
+                        output_format=request.output_format,
+                        request_id=request_id,
+                        final=final,
+                        metadata={
+                            "provider": self.provider_id,
+                            "operation": materialized.operation.value,
+                        },
+                    )
+            else:
+                payloads = _stream_json_objects(response.chunks)
+                for payload, final in _mark_last(payloads):
+                    emitted = True
+                    audio, alignment, normalized_alignment, voice_segments = _timestamp_fields(
+                        payload
+                    )
+                    yield GenerationChunk(
+                        audio=audio,
+                        output_format=request.output_format,
+                        request_id=request_id,
+                        final=final,
+                        alignment=alignment,
+                        normalized_alignment=normalized_alignment,
+                        voice_segments=voice_segments,
+                        metadata={
+                            "provider": self.provider_id,
+                            "operation": materialized.operation.value,
+                        },
+                    )
+            if not emitted:
+                raise GenerationError("ElevenLabs returned an empty audio stream")
+        except OSError as error:
+            raise GenerationError(
+                "ElevenLabs transport failed",
+                context={"provider": self.provider_id, "request_id": request.id},
+            ) from error
+        finally:
+            if response is not None:
+                response.close()

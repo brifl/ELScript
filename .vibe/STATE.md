@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.3
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -50,6 +50,7 @@
 - 2026-08-14: Review FAIL: corrupt non-empty provider audio emits `DECODE_ERROR` without the available provider request, scene, speaker, or segment attribution required for operational diagnosis.
 - 2026-08-14: Resolved ISSUE-303 in `54d9d8a`; file and dialogue-stream failures now retain safe provider/request/scene/segment/character attribution through lower-level decode and assembly errors.
 - 2026-08-14: Re-review FAIL: unlike file generation, an unexpected streaming-adapter exception escapes as raw `RuntimeError` with its potentially secret-bearing message.
+- 2026-08-14: Resolved ISSUE-304 in `8723b92`; streaming now normalizes ordinary adapter failures to attributed, secret-safe `GENERATION_ERROR` while preserving cancellation semantics.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -74,7 +75,10 @@
 - `.venv/bin/python -m pytest tests/test_failures.py tests/test_security.py tests/test_streaming.py -q` — 26 passed; corrupt file/stream audio assertions include full safe attribution.
 - `.venv/bin/python -m pytest -q` — 204 passed; Ruff and strict `mypy src` passed.
 - Unexpected stream-adapter probe — `RuntimeError adapter leaked stream-secret`; no stable code, phase, redaction, or request attribution.
-- Next: resolve ISSUE-304 and repeat checkpoint 3.3 adversarial review.
+- `8723b92` — symmetric provider-failure normalization for streaming; pushed to `origin/main`.
+- `.venv/bin/python -m pytest tests/test_failures.py tests/test_streaming.py tests/test_security.py -q` — 28 passed, including unexpected stream fault redaction and cancellation propagation.
+- `.venv/bin/python -m pytest -q` — 206 passed; Ruff and strict `mypy src` passed.
+- Next: repeat checkpoint 3.3 adversarial review.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
@@ -87,13 +91,7 @@
 ## Active issues
 <!-- Keep only active issues here. Move resolved items to HISTORY.md. -->
 
-- [ ] ISSUE-304: Normalize unexpected streaming-adapter failures
-  - Impact: MAJOR
-  - Status: IN_PROGRESS
-  - Owner: agent
-  - Unblock Condition: Unexpected provider-stream exceptions become secret-safe `GENERATION_ERROR` diagnostics with request attribution while cancellation continues to propagate.
-  - Evidence Needed: A streaming fault test asserting phase/code/context/redaction and the focused/full suite summaries.
-  - Notes: File generation already has this normalization in `generate_with_cache`; streaming needs equivalent behavior.
+- None.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->

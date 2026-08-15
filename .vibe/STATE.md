@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.4
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -52,6 +52,7 @@
 - 2026-08-14: Re-review FAIL: unlike file generation, an unexpected streaming-adapter exception escapes as raw `RuntimeError` with its potentially secret-bearing message.
 - 2026-08-14: Resolved ISSUE-304 in `8723b92`; streaming now normalizes ordinary adapter failures to attributed, secret-safe `GENERATION_ERROR` while preserving cancellation semantics.
 - 2026-08-14: Review PASS for checkpoint 3.3 after 27 focused diagnostic/security/CLI tests, 206 full-suite tests, strict workflow validation, and adversarial file/stream failure probes; auto-advanced to checkpoint 3.4.
+- 2026-08-14: Began checkpoint 3.4 by auditing README examples, distribution contents, build isolation, public metadata, documentation gaps, and cross-platform CI/release checks.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->

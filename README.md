@@ -2,6 +2,10 @@
 
 ELScript is a Python library and command-line tool for rendering structured, expressive, multi-character scripts to speech with ElevenLabs.
 
+> **Release status:** `0.1.0a0` is an alpha release. The ELScript 1.0 document
+> format is implemented and tested, but provider behavior and the Python API may still
+> change before `1.0.0`.
+
 It is designed for:
 
 - robot voices and interactive characters
@@ -33,7 +37,7 @@ ELScript can render a single YAML file, logically merge a directory of YAML file
 
 ## Installation
 
-The intended package and CLI names are:
+ELScript requires Python 3.11 or newer. Install the package from PyPI:
 
 ```bash
 pip install elscript
@@ -47,7 +51,12 @@ import elscript
 elscript story.yaml
 ```
 
-> The package name is part of the project design baseline. Adjust it before publishing if another distribution name is chosen.
+For development from a source checkout:
+
+```bash
+python -m pip install -e ".[dev]"
+python -m pytest -q
+```
 
 ## ElevenLabs configuration
 
@@ -68,12 +77,15 @@ ELSCRIPT_TEXT_NORMALIZATION=auto
 ELSCRIPT_ENABLE_LOGGING=true
 ```
 
-Credentials should be supplied through explicit Python configuration or environment settings, not stored in script YAML.
+Credentials must be supplied through the process environment or a discovered/explicit
+`.env` file, never through script YAML or an `api` mapping. See
+[Configuration](docs/configuration.md) for discovery and precedence rules.
 
 ## Quick start
 
 Create `story.yaml`:
 
+<!-- test:quick-start-yaml -->
 ```yaml
 elscript: "1.0"
 
@@ -127,6 +139,7 @@ scenes:
           say: >
             I really don't like this.
 ```
+<!-- /test:quick-start-yaml -->
 
 Render it:
 
@@ -141,6 +154,21 @@ audio/
 ├── first-story.mp3
 └── first-story.manifest.json
 ```
+
+The quick-start render makes a real ElevenLabs request and may incur provider charges.
+The test suite executes the same YAML through ELScript's deterministic no-network fake
+provider.
+
+## Comprehensive examples
+
+The repository includes the complete **The Signal Below** example in both supported
+project layouts:
+
+- [single YAML file](tests/fixtures/signal_below.yaml)
+- [multi-file directory](tests/fixtures/signal_below/)
+
+Documentation tests render both forms through the canonical pipeline and verify their
+audio and manifests are equivalent.
 
 ## Python API
 
@@ -472,7 +500,10 @@ Synchronous:
 from elscript import stream
 
 for chunk in stream(yaml_text=script):
-    audio_device.write(chunk.data)
+    if chunk.data:
+        audio_device.write(chunk.data)
+    elif chunk.event == "marker":
+        handle_marker(chunk.metadata["name"])
 ```
 
 Asynchronous:
@@ -481,7 +512,8 @@ Asynchronous:
 from elscript import astream
 
 async for chunk in astream(yaml_text=script):
-    await audio_device.write(chunk.data)
+    if chunk.data:
+        await audio_device.write(chunk.data)
 ```
 
 Chunks contain audio bytes plus structured metadata such as the current scene, speech segment, speaker, and segment completion state. This supports robots and interactive applications without forcing them to reverse-engineer the audio stream.
@@ -496,18 +528,20 @@ Typical information includes:
 
 ```json
 {
+  "manifest_version": "1.0",
   "script_id": "first-story",
   "provider": "elevenlabs",
-  "model": "eleven_v3",
+  "models": ["eleven_v3"],
   "output_mode": "single",
+  "output_format": "mp3_44100_192",
   "segments": [
     {
       "id": "arrival.0001",
       "scene_id": "arrival",
       "ordinal": 1,
       "speaker": "NARRATOR",
-      "start": 0.0,
-      "end": 3.84
+      "start_seconds": 0.0,
+      "end_seconds": 3.84
     }
   ]
 }
@@ -563,6 +597,16 @@ elscript ./story \
 ```
 
 The CLI is a thin wrapper around the Python API and must not have separate script interpretation or rendering behavior.
+
+## Documentation
+
+- [ELScript 1.0 syntax](docs/syntax.md)
+- [Configuration and security](docs/configuration.md)
+- [Manifest contract](docs/manifest.md)
+- [Streaming API](docs/streaming.md)
+- [Providers and capability behavior](docs/providers.md)
+- [Troubleshooting](docs/troubleshooting.md)
+- [Release checklist](docs/releasing.md)
 
 ## Design document
 

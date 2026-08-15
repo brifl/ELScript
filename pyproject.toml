@@ -10,12 +10,16 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
 authors = [{ name = "ELScript contributors" }]
+keywords = ["audio", "elevenlabs", "speech", "text-to-speech", "yaml"]
 classifiers = [
   "Development Status :: 2 - Pre-Alpha",
+  "Environment :: Console",
   "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Topic :: Multimedia :: Sound/Audio :: Speech",
   "Typing :: Typed",
 ]
 dependencies = [
@@ -38,8 +42,27 @@ dev = [
 [project.scripts]
 elscript = "elscript.cli:main"
 
+[project.urls]
+Changelog = "https://github.com/brifl/ELScript/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/brifl/ELScript#readme"
+Issues = "https://github.com/brifl/ELScript/issues"
+Repository = "https://github.com/brifl/ELScript"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/elscript"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+  "/CHANGELOG.md",
+  "/DESIGN.md",
+  "/LICENSE",
+  "/README.md",
+  "/docs",
+  "/pyproject.toml",
+  "/src",
+  "/tests",
+  "/tools/check_dist.py",
+]
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers --capture=sys"

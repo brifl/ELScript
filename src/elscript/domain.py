@@ -114,6 +114,8 @@ class RenderResult:
     scenes: tuple[SceneResult, ...] = ()
     segments: tuple[SegmentResult, ...] = ()
     provider_requests: int = 0
+    cache_hits: int = 0
+    cache_misses: int = 0
     warnings: tuple[Diagnostic, ...] = ()
 
 

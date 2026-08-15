@@ -9,6 +9,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from .cache import (
+    RenderCache,
+    cache_root_for_output,
+    fingerprint_render_plan,
+    generate_with_cache,
+)
 from .compiler import compile_document
 from .config import EffectiveConfig, resolve_config
 from .domain import (
@@ -102,6 +108,8 @@ def _result_from_manifest(
         scenes=scenes,
         segments=segments,
         provider_requests=len(manifest.provider_requests),
+        cache_hits=sum(request.cache_status == "hit" for request in manifest.provider_requests),
+        cache_misses=sum(request.cache_status != "hit" for request in manifest.provider_requests),
         warnings=warnings,
     )
 
@@ -198,9 +206,18 @@ def render(
     if prepared.config.manifest_enabled:
         preflight_manifest_output(prepared.compiled.script_id, preflight.root)
 
-    results = {
-        request.id: prepared.provider.generate(request) for request in prepared.plan.requests
-    }
+    fingerprints = fingerprint_render_plan(
+        prepared.plan,
+        normalize_loudness=prepared.config.normalize_loudness,
+        preserve_continuity=prepared.config.chunking.preserve_continuity,
+    )
+    cache = RenderCache(cache_root_for_output(preflight.root))
+    results, cache_statuses, generated_request_ids = generate_with_cache(
+        prepared.plan,
+        prepared.provider.generate,
+        cache,
+        fingerprints.requests,
+    )
     outputs = write_render_outputs(
         prepared.compiled,
         prepared.plan,
@@ -210,6 +227,22 @@ def render(
         normalize_loudness=prepared.config.normalize_loudness,
     )
     try:
+        build_manifest(
+            prepared.compiled,
+            prepared.plan,
+            results,
+            outputs,
+            prepared.config,
+            warnings=prepared.warnings,
+            cache_statuses=cache_statuses,
+            render_fingerprints=fingerprints.segments,
+        )
+        for request_id in generated_request_ids:
+            if not cache.store(
+                fingerprints.requests[request_id],
+                results[request_id],
+            ):
+                cache_statuses[request_id] = f"{cache_statuses[request_id]}_unstored"
         manifest = build_manifest(
             prepared.compiled,
             prepared.plan,
@@ -217,6 +250,8 @@ def render(
             outputs,
             prepared.config,
             warnings=prepared.warnings,
+            cache_statuses=cache_statuses,
+            render_fingerprints=fingerprints.segments,
         )
         manifest_path = (
             write_manifest(manifest, preflight.root) if prepared.config.manifest_enabled else None

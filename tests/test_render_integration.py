@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+from copy import deepcopy
 from pathlib import Path
 
 import pytest
@@ -42,10 +43,13 @@ def _small_document() -> dict[str, object]:
 def _result_signature(rendered: RenderResult) -> tuple[object, ...]:
     files = rendered.files
     assert rendered.manifest_path is not None
+    manifest = json.loads(rendered.manifest_path.read_text(encoding="utf-8"))
+    for request in manifest["provider_requests"]:
+        request["cache_status"] = "observed"
     return (
         tuple(path.name for path in files),
         tuple(path.read_bytes() for path in files),
-        json.loads(rendered.manifest_path.read_text(encoding="utf-8")),
+        manifest,
         rendered.duration_seconds,
         tuple(scene.id for scene in rendered.scenes),
         tuple(segment.id for segment in rendered.segments),
@@ -274,3 +278,52 @@ def test_public_pipeline_prepares_elevenlabs_requests_and_returns_warnings(
     assert result.manifest_path is not None
     payload = json.loads(result.manifest_path.read_text(encoding="utf-8"))
     assert [warning["code"] for warning in payload["warnings"]] == ["ELEVENLABS_SEED_BEST_EFFORT"]
+
+
+def test_incremental_regeneration_invalidates_only_continuity_dependents(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    document = {
+        "elscript": "1.0",
+        "meta": {"id": "incremental"},
+        "render": {
+            "provider": "fake",
+            "mode": "speech",
+            "output_format": "wav_16000",
+            "chunking": {"preserve_continuity": True},
+        },
+        "characters": {"MARA": {"voice_id": "mara-voice"}},
+        "scenes": [
+            {
+                "id": "one",
+                "script": [
+                    {"MARA": {"id": "a", "say": "Alpha."}},
+                    {"MARA": {"id": "b", "say": "Bravo."}},
+                    {"MARA": {"id": "c", "say": "Charlie."}},
+                    {"MARA": {"id": "d", "say": "Delta."}},
+                ],
+            }
+        ],
+        "export": {"mode": "segment"},
+    }
+    provider = FakeProvider()
+    monkeypatch.setattr(api_module, "FakeProvider", lambda: provider)
+    first = render_document(document, output_dir=tmp_path / "first")
+    changed = deepcopy(document)
+    changed["scenes"][0]["script"][1]["MARA"]["say"] = "Changed bravo."
+
+    second = render_document(changed, output_dir=tmp_path / "second")
+
+    assert len(provider.requests) == 7
+    assert (first.cache_hits, first.cache_misses) == (0, 4)
+    assert (second.cache_hits, second.cache_misses) == (1, 3)
+    assert second.files[-1].read_bytes() == first.files[-1].read_bytes()
+    assert second.manifest_path is not None
+    manifest = json.loads(second.manifest_path.read_text(encoding="utf-8"))
+    assert [request["cache_status"] for request in manifest["provider_requests"]] == [
+        "miss",
+        "miss",
+        "miss",
+        "hit",
+    ]

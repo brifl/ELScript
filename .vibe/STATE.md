@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.4
-- Status: IN_PROGRESS  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -53,6 +53,7 @@
 - 2026-08-14: Resolved ISSUE-304 in `8723b92`; streaming now normalizes ordinary adapter failures to attributed, secret-safe `GENERATION_ERROR` while preserving cancellation semantics.
 - 2026-08-14: Review PASS for checkpoint 3.3 after 27 focused diagnostic/security/CLI tests, 206 full-suite tests, strict workflow validation, and adversarial file/stream failure probes; auto-advanced to checkpoint 3.4.
 - 2026-08-14: Began checkpoint 3.4 by auditing README examples, distribution contents, build isolation, public metadata, documentation gaps, and cross-platform CI/release checks.
+- 2026-08-14: Implemented checkpoint 3.4 in `7a5662e`; public examples/reference docs, scoped package metadata, artifact verification, changelog/release guidance, and Linux/macOS/Windows CI now form one executable release surface.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -81,7 +82,11 @@
 - `.venv/bin/python -m pytest tests/test_failures.py tests/test_streaming.py tests/test_security.py -q` — 28 passed, including unexpected stream fault redaction and cancellation propagation.
 - `.venv/bin/python -m pytest -q` — 206 passed; Ruff and strict `mypy src` passed.
 - Checkpoint 3.3 review: 27 focused tests passed; corrupt audio and unexpected stream failures retain stable redacted attribution, cancellation propagates, and no code-review improvements remain.
-- Next: implement checkpoint 3.4 documentation and package release readiness.
+- `7a5662e` — documentation/package/release implementation; pushed to `origin/main`.
+- `.venv/bin/python -m pytest tests/test_docs_examples.py tests/test_design_examples.py tests/test_public_contracts.py -q` — 20 passed; README quick start and both comprehensive layouts render through the fake provider.
+- `.venv/bin/python -m build && .venv/bin/python tools/check_dist.py dist` — verified `elscript-0.1.0a0-py3-none-any.whl` and `elscript-0.1.0a0.tar.gz`; fresh wheel install/import/CLI/render smoke passed outside the checkout.
+- `.venv/bin/python -m pytest -q` — 210 passed; Ruff and strict `mypy src` passed.
+- Next: independent review of checkpoint 3.4 release readiness and distribution contents.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

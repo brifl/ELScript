@@ -63,6 +63,7 @@
 - 2026-08-14: Designed Stage 4 from repository and live CI evidence: the six-job Python 3.11/3.12 matrix passes, but every job warns about deprecated Node 20 action runtimes and Python 3.13/3.14 are not exercised despite the open-ended `>=3.11` requirement.
 - 2026-08-14: Implemented checkpoint 4.1 in `afec37c`; CI now exercises CPython 3.11–3.14 on all three hosted operating systems with Node 24 actions, Python 3.14 artifact installation, synchronized classifiers, and an explicit no-release-authority assertion.
 - 2026-08-14: Review PASS for checkpoint 4.1 after exact hosted-job/artifact/annotation probes and focused policy tests; the active plan is exhausted with publication and paid-provider work still deferred.
+- 2026-08-14: Post-stage design assessment found no evidence-supported implementation backlog beyond the completed 1.0 contract; publication, provider revalidation, and paid smoke remain deferred, so further product work requires an operator-selected outcome.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -122,7 +123,13 @@
 ## Active issues
 <!-- Keep only active issues here. Move resolved items to HISTORY.md. -->
 
-- None.
+- [ ] ISSUE-401: Select the next operator-visible product outcome
+  - Impact: QUESTION
+  - Status: DECISION_REQUIRED
+  - Owner: human
+  - Unblock Condition: Define and approve the next product capability or explicitly authorize one of the deferred release/provider activities.
+  - Evidence Needed: An operator instruction naming the desired outcome and any changed authorization boundary.
+  - Notes: The DESIGN.md 1.0 contract, local distribution readiness, and current cross-platform runtime matrix are complete. Do not invent speculative features or reactivate publication/paid calls without direction.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->

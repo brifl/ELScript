@@ -61,4 +61,6 @@ operating systems without deprecated CI runtimes or accidental release authority
 - [DEFERRED] Publish `elscript-audio` to PyPI; owner: human-assisted agent; revisit only
   after a new explicit operator instruction authorizes the upload and release/tag actions.
 - [DEFERRED] Run a minimal real ElevenLabs speech/timestamp/dialogue smoke before the first release; owner: human-assisted agent; revisit when `ELEVENLABS_API_KEY` and approval to incur a small provider charge are available.
-- Re-check current ElevenLabs model, endpoint, output-format, retention, and account-limit assumptions before release; update only the provider capability layer when upstream behavior has changed.
+- [DEFERRED] Re-check current ElevenLabs model, endpoint, output-format, retention, and
+  account-limit assumptions; owner: agent; revisit immediately before an explicitly
+  authorized release candidate because the 2026-08-14 capability review is current.

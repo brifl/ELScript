@@ -26,9 +26,14 @@ from .audio import (
     slice_audio,
 )
 from .domain import CompiledScript, PauseEvent, SpeechSegment
-from .errors import AssemblyError, FilenameCollisionError, WriteError
+from .errors import AssemblyError, ELScriptError, FilenameCollisionError, WriteError
 from .planner import RenderPlan
-from .providers.base import GenerationResult, ProviderRequest, RequestKind
+from .providers.base import (
+    GenerationResult,
+    ProviderRequest,
+    RequestKind,
+    request_diagnostic_context,
+)
 
 _INVALID_FILENAME_CHARACTER = re.compile(r'[<>:"/\\|?*\x00-\x1f]+')
 _WHITESPACE = re.compile(r"\s+")
@@ -231,7 +236,17 @@ def _timeline_parts(
             continue
         if isinstance(event, ProviderRequest):
             result = results[event.id]
-            parts.append(AudioClip(result.audio, result.output_format))
+            parts.append(
+                AudioClip(
+                    result.audio,
+                    result.output_format,
+                    request_diagnostic_context(
+                        plan.provider_id,
+                        event,
+                        provider_request_id=result.request_id,
+                    ),
+                )
+            )
         elif isinstance(event, PauseEvent):
             parts.append(Silence(event.duration_seconds))
     return tuple(parts)
@@ -294,20 +309,30 @@ def _segment_audio(
     buffers: dict[str, list[PCMBuffer]] = defaultdict(list)
     for request in plan.requests:
         result = results[request.id]
-        decoded = decode_audio(
-            result.audio,
-            result.output_format,
-            target_sample_rate=rate,
-        )
-        if request.kind is RequestKind.SPEECH:
-            if len(request.parts) != 1:
-                raise AssemblyError(
-                    "Speech request must map to exactly one planned part",
-                    context={"request_id": request.id},
+        try:
+            decoded = decode_audio(
+                result.audio,
+                result.output_format,
+                target_sample_rate=rate,
+            )
+            if request.kind is RequestKind.SPEECH:
+                if len(request.parts) != 1:
+                    raise AssemblyError(
+                        "Speech request must map to exactly one planned part",
+                        context={"request_id": request.id},
+                    )
+                buffers[request.parts[0].logical_id].append(decoded)
+            else:
+                _append_dialogue_parts(request, result, decoded, buffers)
+        except ELScriptError as error:
+            error.enrich_context(
+                request_diagnostic_context(
+                    plan.provider_id,
+                    request,
+                    provider_request_id=result.request_id,
                 )
-            buffers[request.parts[0].logical_id].append(decoded)
-        else:
-            _append_dialogue_parts(request, result, decoded, buffers)
+            )
+            raise
 
     assembled: dict[str, AudioAssemblyResult] = {}
     for segment in compiled.segments:
@@ -317,11 +342,22 @@ def _segment_audio(
                 "No generated audio maps to a compiled speech segment",
                 context={"segment_id": segment.id},
             )
-        assembled[segment.id] = assemble_pcm(
-            pieces,
-            output_format,
-            normalize_loudness=normalize_loudness,
-        )
+        try:
+            assembled[segment.id] = assemble_pcm(
+                pieces,
+                output_format,
+                normalize_loudness=normalize_loudness,
+            )
+        except ELScriptError as error:
+            error.enrich_context(
+                {
+                    "provider": plan.provider_id,
+                    "scene_id": segment.scene_id,
+                    "segment_id": segment.id,
+                    "character_id": segment.speaker,
+                }
+            )
+            raise
     return assembled
 
 
@@ -334,20 +370,41 @@ def _assemble_targets(
     *,
     normalize_loudness: bool,
 ) -> tuple[AudioAssemblyResult, ...]:
-    if plan.output_mode == "single":
-        return (
-            assemble_audio(
-                _timeline_parts(plan, results),
+    def enrich_target(error: ELScriptError, target: OutputTarget) -> None:
+        context: dict[str, object] = {
+            "provider": plan.provider_id,
+            "output_filename": target.filename,
+        }
+        for key, value in (
+            ("scene_id", target.scene_id),
+            ("segment_id", target.segment_id),
+            ("character_id", target.speaker),
+        ):
+            if value is not None:
+                context[key] = value
+        error.enrich_context(context)
+
+    def assemble_clips(
+        target: OutputTarget,
+        parts: Sequence[AudioClip | Silence],
+    ) -> AudioAssemblyResult:
+        try:
+            return assemble_audio(
+                parts,
                 output_format,
                 normalize_loudness=normalize_loudness,
-            ),
-        )
+            )
+        except ELScriptError as error:
+            enrich_target(error, target)
+            raise
+
+    if plan.output_mode == "single":
+        return (assemble_clips(targets[0], _timeline_parts(plan, results)),)
     if plan.output_mode == "scene":
         return tuple(
-            assemble_audio(
+            assemble_clips(
+                target,
                 _timeline_parts(plan, results, scene_id=target.scene_id),
-                output_format,
-                normalize_loudness=normalize_loudness,
             )
             for target in targets
         )
@@ -427,8 +484,10 @@ def _write_bytes_exclusive(path: Path, payload: bytes) -> None:
 
 def _write_all(paths: Sequence[Path], payloads: Sequence[bytes]) -> None:
     created: list[Path] = []
+    current_path: Path | None = None
     try:
         for path, payload in zip(paths, payloads, strict=True):
+            current_path = path
             _write_bytes_exclusive(path, payload)
             created.append(path)
     except BaseException as error:
@@ -436,7 +495,10 @@ def _write_all(paths: Sequence[Path], payloads: Sequence[bytes]) -> None:
             with suppress(OSError):
                 path.unlink()
         if isinstance(error, (OSError, ValueError)):
-            raise WriteError("Audio outputs could not be written") from error
+            raise WriteError(
+                "Audio outputs could not be written",
+                context={"path": str(current_path) if current_path is not None else None},
+            ) from error
         raise
 
 

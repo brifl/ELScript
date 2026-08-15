@@ -995,7 +995,10 @@ def write_manifest(
             context={"path": str(path)},
         ) from error
     except OSError as error:
-        raise WriteError("Manifest could not be written") from error
+        raise WriteError(
+            "Manifest could not be written",
+            context={"path": str(path)},
+        ) from error
     return path
 
 

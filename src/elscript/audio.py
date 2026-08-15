@@ -7,14 +7,14 @@ import math
 import re
 import sys
 from array import array
-from collections.abc import Iterable
-from dataclasses import dataclass
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
 from fractions import Fraction
-from typing import cast
+from typing import Any, cast
 
 import av
 
-from .errors import AssemblyError, DecodeError, UnsupportedOutputFormatError
+from .errors import AssemblyError, DecodeError, ELScriptError, UnsupportedOutputFormatError
 
 _FORMAT_PATTERN = re.compile(
     r"^(?P<codec>mp3|opus)_(?P<rate>[1-9][0-9]*)_(?P<bitrate>[1-9][0-9]*)$"
@@ -62,6 +62,7 @@ class PCMBuffer:
 class AudioClip:
     data: bytes
     output_format: str
+    diagnostic_context: Mapping[str, Any] = field(default_factory=dict)
 
     def __post_init__(self) -> None:
         if not self.data:
@@ -342,13 +343,17 @@ def assemble_audio(
     buffers: list[PCMBuffer] = []
     for part in parts:
         if isinstance(part, AudioClip):
-            buffers.append(
-                decode_audio(
-                    part.data,
-                    part.output_format,
-                    target_sample_rate=spec.sample_rate,
+            try:
+                buffers.append(
+                    decode_audio(
+                        part.data,
+                        part.output_format,
+                        target_sample_rate=spec.sample_rate,
+                    )
                 )
-            )
+            except ELScriptError as error:
+                error.enrich_context(part.diagnostic_context)
+                raise
         else:
             buffers.append(silence_audio(part.duration_seconds, spec.sample_rate))
     return encode_audio(

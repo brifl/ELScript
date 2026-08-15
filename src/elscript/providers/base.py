@@ -158,6 +158,34 @@ class ProviderRequest:
             raise ValueError("provider requests must not cross scene boundaries")
 
 
+def request_diagnostic_context(
+    provider_id: str,
+    request: ProviderRequest,
+    *,
+    provider_request_id: str | None = None,
+) -> dict[str, Any]:
+    """Return secret-free authored and provider attribution for one request."""
+
+    segment_ids = tuple(dict.fromkeys(part.logical_id for part in request.parts))
+    character_ids = tuple(dict.fromkeys(part.segment.speaker for part in request.parts))
+    context: dict[str, Any] = {
+        "provider": provider_id,
+        "request_id": request.id,
+        "scene_id": request.scene_id,
+    }
+    if provider_request_id is not None:
+        context["provider_request_id"] = provider_request_id
+    if len(segment_ids) == 1:
+        context["segment_id"] = segment_ids[0]
+    else:
+        context["segment_ids"] = segment_ids
+    if len(character_ids) == 1:
+        context["character_id"] = character_ids[0]
+    else:
+        context["character_ids"] = character_ids
+    return context
+
+
 @dataclass(frozen=True, slots=True)
 class CharacterAlignment:
     characters: tuple[str, ...]

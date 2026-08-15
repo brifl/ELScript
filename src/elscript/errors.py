@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping
-from typing import Any, ClassVar
+from typing import Any, ClassVar, Self
 
 from .domain import PipelinePhase, SourceLocation
 from .redaction import redact
@@ -42,6 +42,13 @@ class ELScriptError(Exception):
             rendered = ", ".join(f"{key}={value!r}" for key, value in self.context.items())
             parts.append(f"({rendered})")
         return " ".join(parts)
+
+    def enrich_context(self, context: Mapping[str, Any]) -> Self:
+        """Attach safe higher-level attribution without replacing specific details."""
+
+        inherited = redact(context)
+        self.context = {**inherited, **self.context}
+        return self
 
 
 class InputError(ELScriptError):

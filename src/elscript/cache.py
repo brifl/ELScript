@@ -27,6 +27,7 @@ from .providers.base import (
     GenerationResult,
     ProviderRequest,
     VoiceSegmentMetadata,
+    request_diagnostic_context,
 )
 
 CACHE_IDENTITY_VERSION = "elscript-render-v1"
@@ -535,12 +536,13 @@ def generate_with_cache(
             continue
         try:
             result = provider_generate(request)
-        except ELScriptError:
+        except ELScriptError as error:
+            error.enrich_context(request_diagnostic_context(plan.provider_id, request))
             raise
         except Exception as error:
             raise GenerationError(
                 "Provider generation failed unexpectedly",
-                context={"provider": plan.provider_id, "request_id": request.id},
+                context=request_diagnostic_context(plan.provider_id, request),
             ) from error
         results[request.id] = result
         statuses[request.id] = lookup.status

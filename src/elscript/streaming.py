@@ -8,7 +8,7 @@ from typing import Any
 
 from .audio import decode_audio, encode_audio, slice_audio
 from .domain import AudioChunk, MarkerEvent, NoteEvent, PauseEvent
-from .errors import GenerationError
+from .errors import ELScriptError, GenerationError
 from .planner import RenderPlan
 from .providers.base import (
     GenerationChunk,
@@ -16,6 +16,7 @@ from .providers.base import (
     ProviderRequest,
     RequestKind,
     VoiceSegmentMetadata,
+    request_diagnostic_context,
 )
 
 
@@ -160,7 +161,17 @@ def _dialogue_chunks(
         request,
         provider,
     )
-    decoded = decode_audio(audio, request.output_format)
+    try:
+        decoded = decode_audio(audio, request.output_format)
+    except ELScriptError as error:
+        error.enrich_context(
+            request_diagnostic_context(
+                provider.provider_id,
+                request,
+                provider_request_id=provider_request_id,
+            )
+        )
+        raise
     ordered = sorted(voice_segments, key=lambda item: item.start_seconds)
     if len(ordered) != len(request.parts):
         raise GenerationError(
@@ -261,7 +272,12 @@ def stream_render_plan(
                 output_format=output_format,
                 include_source_text=include_source_text,
             )
-        elif event.kind is RequestKind.SPEECH:
-            yield from _speech_chunks(event, provider, last_request_by_segment)
-        else:
-            yield from _dialogue_chunks(event, provider, last_request_by_segment)
+            continue
+        try:
+            if event.kind is RequestKind.SPEECH:
+                yield from _speech_chunks(event, provider, last_request_by_segment)
+            else:
+                yield from _dialogue_chunks(event, provider, last_request_by_segment)
+        except ELScriptError as error:
+            error.enrich_context(request_diagnostic_context(plan.provider_id, event))
+            raise

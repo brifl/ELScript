@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
@@ -7,11 +8,16 @@ import pytest
 import elscript.api as api_module
 import elscript.cache as cache_module
 import elscript.output as output_module
-from elscript import render_document
+from elscript import render_document, stream
 from elscript.diagnostics import ERROR_REGISTRY, WARNING_REGISTRY, format_error
 from elscript.domain import PipelinePhase
 from elscript.errors import ELScriptError, GenerationError
-from elscript.providers.base import GenerationResult, ProviderCapabilities, ProviderRequest
+from elscript.providers.base import (
+    GenerationChunk,
+    GenerationResult,
+    ProviderCapabilities,
+    ProviderRequest,
+)
 from elscript.providers.fake import FakeProvider, fake_capabilities
 
 
@@ -19,13 +25,14 @@ def _document(
     *,
     script_id: str = "failure-story",
     seed: int = 17,
+    mode: str = "speech",
 ) -> dict[str, object]:
     return {
         "elscript": "1.0",
         "meta": {"id": script_id},
         "render": {
             "provider": "fake",
-            "mode": "speech",
+            "mode": mode,
             "output_format": "wav_16000",
             "seed": seed,
         },
@@ -109,6 +116,64 @@ def test_unexpected_provider_exception_is_stable_and_secret_free(
     assert caught.value.context["provider"] == "fake"
     assert "private-provider-value" not in str(caught.value)
     assert not tuple(output.iterdir())
+
+
+def test_corrupt_provider_audio_retains_request_and_authored_attribution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class CorruptAudioProvider(FakeProvider):
+        def generate(self, request: ProviderRequest) -> GenerationResult:
+            return GenerationResult(
+                audio=b"not-a-wav",
+                output_format=request.output_format,
+                request_id="provider-request-123",
+            )
+
+    monkeypatch.setattr(api_module, "FakeProvider", CorruptAudioProvider)
+
+    with pytest.raises(ELScriptError) as caught:
+        render_document(_document(), output_dir=tmp_path / "corrupt")
+
+    assert caught.value.code == "DECODE_ERROR"
+    assert caught.value.context == {
+        "provider": "fake",
+        "request_id": "request.0001",
+        "scene_id": "one",
+        "provider_request_id": "provider-request-123",
+        "segment_id": "first",
+        "character_id": "MARA",
+        "output_format": "wav_16000",
+    }
+
+
+def test_dialogue_stream_decode_failure_retains_all_request_attribution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    class CorruptStreamProvider(FakeProvider):
+        def stream(self, request: ProviderRequest) -> Iterator[GenerationChunk]:
+            yield GenerationChunk(
+                audio=b"not-a-wav",
+                output_format=request.output_format,
+                request_id="provider-stream-123",
+                final=True,
+            )
+
+    monkeypatch.setattr(api_module, "FakeProvider", CorruptStreamProvider)
+
+    with pytest.raises(ELScriptError) as caught:
+        tuple(stream(document=_document(mode="dialogue")))
+
+    assert caught.value.code == "DECODE_ERROR"
+    assert caught.value.context == {
+        "provider": "fake",
+        "request_id": "request.0001",
+        "scene_id": "one",
+        "provider_request_id": "provider-stream-123",
+        "segment_ids": ("first", "second"),
+        "character_id": "MARA",
+        "output_format": "wav_16000",
+    }
 
 
 def test_partial_provider_failure_does_not_touch_prior_render_or_publish_cache(

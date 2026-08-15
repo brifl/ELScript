@@ -301,16 +301,20 @@ def test_atomic_records_remain_readable_during_concurrent_replacement(
     request = plan.requests[0]
     fingerprint = fingerprints.requests[request.id]
     result = FakeProvider().generate(request)
-    cache = RenderCache(tmp_path / "cache")
+    cache_root = tmp_path / "cache"
+    cache = RenderCache(cache_root)
     assert cache.store(fingerprint, result)
 
     def write_many() -> None:
+        writer = RenderCache(cache_root)
         for _ in range(5):
-            assert cache.store(fingerprint, result)
+            assert writer.store(fingerprint, result)
 
     def read_many() -> set[str]:
+        reader = RenderCache(cache_root)
         return {
-            cache.lookup(fingerprint, output_format=request.output_format).status for _ in range(12)
+            reader.lookup(fingerprint, output_format=request.output_format).status
+            for _ in range(12)
         }
 
     with ThreadPoolExecutor(max_workers=6) as executor:

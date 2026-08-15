@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.4
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,11 +26,11 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] Every README quick-start and comprehensive example is executed by tests against the canonical pipeline.
-- [ ] Public docs clearly separate portable semantics, provider escape hatches, supported degradation, and out-of-scope 1.0 features.
-- [ ] `sdist` and wheel build cleanly, contain required documentation/package assets, and install/import in a fresh environment.
-- [ ] Static/type/test checks pass from documented commands without repository-local undeclared state.
-- [ ] The release checklist includes the opt-in credentialed smoke and current provider-capability review without making paid calls part of default CI.
+- [x] Every README quick-start and comprehensive example is executed by tests against the canonical pipeline.
+- [x] Public docs clearly separate portable semantics, provider escape hatches, supported degradation, and out-of-scope 1.0 features.
+- [x] `sdist` and wheel build cleanly, contain required documentation/package assets, and install/import in a fresh environment.
+- [x] Static/type/test checks pass from documented commands without repository-local undeclared state.
+- [x] The release checklist includes the opt-in credentialed smoke and current provider-capability review without making paid calls part of default CI.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -58,6 +58,7 @@
 - 2026-08-14: Operator selected `elscript-audio` as the distribution name and explicitly deferred publication; the import package and CLI remain `elscript`.
 - 2026-08-14: Resolved ISSUE-305 in `71f3627` with synchronized metadata, install guidance, artifact checks, CI naming, and a publication deferral.
 - 2026-08-14: Full-suite verification exposed a reproducible cross-instance cache replacement race on the Windows-mounted workspace; resolved ISSUE-306 in `ce8d02d` with one shared in-process lock per cache root.
+- 2026-08-14: Review PASS for checkpoint 3.4; package identity, docs, artifacts, isolated installation, deterministic examples, cache concurrency, and publication boundaries satisfy the release-readiness contract. The active plan is exhausted.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -97,6 +98,9 @@
 - Isolated build/Twine/check/install smoke — verified `elscript_audio-0.1.0a0-py3-none-any.whl`, `elscript_audio-0.1.0a0.tar.gz`, installed distribution metadata, `import elscript`, CLI help, and one fake render.
 - `ce8d02d` — sibling `RenderCache` instances now share a per-root lock; the previously flaky contention test passed 10 consecutive runs.
 - `.venv/bin/python -m pytest -q` — 210 passed after distribution rename and cache concurrency hardening; Ruff and strict mypy passed.
+- Adversarial distribution probe — fresh metadata maps `elscript` to `elscript-audio`, and no distribution named `elscript` is installed; 12 focused docs/cache tests passed.
+- `d5210cc` — final review clarifies the chosen local distribution identity and removes line-wrap brittleness from its documentation assertion.
+- Plan exhausted: all Stage 3 checkpoints are complete; PyPI publication and paid provider smoke remain explicitly deferred.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

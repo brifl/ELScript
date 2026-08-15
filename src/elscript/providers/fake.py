@@ -139,12 +139,7 @@ class FakeProvider:
             b"".join(
                 struct.pack(
                     "<h",
-                    round(
-                        4_000
-                        * math.sin(
-                            2 * math.pi * frequency * index / spec.sample_rate
-                        )
-                    ),
+                    round(4_000 * math.sin(2 * math.pi * frequency * index / spec.sample_rate)),
                 )
                 for index in range(sample_count)
             ),
@@ -162,12 +157,10 @@ class FakeProvider:
             character_duration = 0.1 / max(len(text), 1)
             characters.extend(text)
             starts.extend(
-                part_start + character_duration * position
-                for position in range(len(text))
+                part_start + character_duration * position for position in range(len(text))
             )
             ends.extend(
-                part_start + character_duration * (position + 1)
-                for position in range(len(text))
+                part_start + character_duration * (position + 1) for position in range(len(text))
             )
             if request.kind is RequestKind.DIALOGUE:
                 voice_segments.append(
@@ -204,5 +197,8 @@ class FakeProvider:
             output_format=result.output_format,
             request_id=result.request_id,
             final=True,
+            alignment=result.alignment,
+            normalized_alignment=result.normalized_alignment,
+            voice_segments=result.voice_segments,
             metadata=result.metadata,
         )

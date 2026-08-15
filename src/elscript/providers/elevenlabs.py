@@ -303,7 +303,9 @@ def _duration(
     return max(candidates, default=None)
 
 
-def _timestamp_fields(payload: Mapping[str, Any]) -> tuple[
+def _timestamp_fields(
+    payload: Mapping[str, Any],
+) -> tuple[
     bytes,
     CharacterAlignment | None,
     CharacterAlignment | None,
@@ -389,7 +391,9 @@ class ElevenLabsProvider:
         capabilities: ProviderCapabilities | None = None,
     ) -> None:
         self._credential = (
-            credential if isinstance(credential, SecretValue) else SecretValue(credential)
+            credential
+            if isinstance(credential, SecretValue)
+            else SecretValue(credential)
             if credential is not None
             else None
         )
@@ -401,9 +405,9 @@ class ElevenLabsProvider:
     def describe_capabilities(self) -> ProviderCapabilities:
         return self._capabilities
 
-    def _transport_request(self, planned: ProviderRequest) -> tuple[
-        ElevenLabsRequest, TransportRequest
-    ]:
+    def _transport_request(
+        self, planned: ProviderRequest
+    ) -> tuple[ElevenLabsRequest, TransportRequest]:
         if self._credential is None or not self._credential.reveal():
             raise AuthenticationError("An ElevenLabs API key is required")
         materialized = build_elevenlabs_request(planned, self._capabilities)
@@ -418,14 +422,10 @@ class ElevenLabsProvider:
                 "Content-Type": "application/json",
                 "xi-api-key": self._credential.reveal(),
             },
-            body=json.dumps(
-                _json_compatible(materialized.body), separators=(",", ":")
-            ).encode(),
+            body=json.dumps(_json_compatible(materialized.body), separators=(",", ":")).encode(),
         )
 
-    def _send(
-        self, planned: ProviderRequest
-    ) -> tuple[ElevenLabsRequest, TransportResponse]:
+    def _send(self, planned: ProviderRequest) -> tuple[ElevenLabsRequest, TransportResponse]:
         materialized, outgoing = self._transport_request(planned)
         try:
             response = self._transport.send(outgoing)
@@ -499,12 +499,12 @@ class ElevenLabsProvider:
                 output_format=request.output_format,
                 request_id=request_id,
                 final=index == len(payloads) - 1,
+                alignment=alignment,
+                normalized_alignment=normalized_alignment,
+                voice_segments=voice_segments,
                 metadata={
                     "provider": self.provider_id,
                     "operation": materialized.operation.value,
-                    "alignment": alignment,
-                    "normalized_alignment": normalized_alignment,
-                    "voice_segments": voice_segments,
                 },
             )
 

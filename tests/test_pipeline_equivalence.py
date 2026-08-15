@@ -4,6 +4,7 @@ from pathlib import Path
 
 import yaml
 
+from elscript import stream
 from elscript.loading import load_document
 
 
@@ -44,3 +45,29 @@ def test_source_forms_produce_the_same_canonical_document(tmp_path: Path) -> Non
 
     assert all(result.data == loaded[0].data for result in loaded[1:])
     assert [scene["id"] for scene in loaded[0].data["scenes"]] == ["first", "later"]
+
+
+def test_streaming_source_forms_produce_equivalent_chunks(tmp_path: Path) -> None:
+    document = {
+        "elscript": "1.0",
+        "meta": {"id": "stream-equivalent"},
+        "render": {"provider": "fake", "output_format": "wav_16000"},
+        "characters": {"MARA": {"voice_id": "voice-mara"}},
+        "scenes": [{"id": "one", "script": [{"MARA": "Hello."}]}],
+    }
+    yaml_text = yaml.safe_dump(document, sort_keys=False)
+    source_file = tmp_path / "story.yaml"
+    source_file.write_text(yaml_text, encoding="utf-8")
+    source_directory = tmp_path / "project"
+    source_directory.mkdir()
+    (source_directory / "story.yaml").write_text(yaml_text, encoding="utf-8")
+
+    streamed = [
+        tuple(stream(source=source_file)),
+        tuple(stream(source=source_directory)),
+        tuple(stream(yaml_text=yaml_text)),
+        tuple(stream(document=document)),
+    ]
+
+    assert all(chunks == streamed[0] for chunks in streamed[1:])
+    assert streamed[0][0].final_for_segment

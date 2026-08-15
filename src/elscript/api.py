@@ -2,15 +2,18 @@
 
 from __future__ import annotations
 
+import asyncio
 from collections.abc import AsyncIterator, Iterator, Mapping
 from contextlib import suppress
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from .compiler import compile_document
-from .config import resolve_config
+from .config import EffectiveConfig, resolve_config
 from .domain import (
     AudioChunk,
+    CompiledScript,
     Diagnostic,
     RenderOptions,
     RenderResult,
@@ -26,7 +29,7 @@ from .manifest import (
     write_manifest,
 )
 from .output import preflight_render_outputs, write_render_outputs
-from .planner import plan_render
+from .planner import RenderPlan, plan_render
 from .providers.base import Provider
 from .providers.elevenlabs import ElevenLabsProvider
 from .providers.elevenlabs_prompt import (
@@ -34,10 +37,20 @@ from .providers.elevenlabs_prompt import (
     prepare_elevenlabs,
 )
 from .providers.fake import FakeProvider
+from .streaming import stream_render_plan
 from .validation import validate_document
 
 SourcePath = str | Path
 OptionsInput = RenderOptions | Mapping[str, Any]
+
+
+@dataclass(frozen=True, slots=True)
+class _PreparedPipeline:
+    config: EffectiveConfig
+    compiled: CompiledScript
+    provider: Provider
+    plan: RenderPlan
+    warnings: tuple[Diagnostic, ...]
 
 
 def _validate_source_choice(
@@ -93,17 +106,16 @@ def _result_from_manifest(
     )
 
 
-def render(
+def _prepare_pipeline(
     *,
-    source: SourcePath | None = None,
-    yaml_text: str | None = None,
-    document: Mapping[str, Any] | None = None,
-    output_dir: SourcePath,
-    options: OptionsInput | None = None,
-    env_file: SourcePath | None = None,
-) -> RenderResult:
-    """Render exactly one supported source form to files in ``output_dir``."""
-
+    source: SourcePath | None,
+    yaml_text: str | None,
+    document: Mapping[str, Any] | None,
+    options: OptionsInput | None,
+    env_file: SourcePath | None,
+    output_dir: SourcePath | None,
+    streaming: bool,
+) -> _PreparedPipeline:
     _validate_source_choice(source, yaml_text, document)
     loaded = load_document(
         source=source,
@@ -124,7 +136,12 @@ def render(
     warnings: tuple[Diagnostic, ...] = ()
     if config.provider == "fake":
         provider = FakeProvider()
-        plan = plan_render(compiled, config, provider.describe_capabilities())
+        plan = plan_render(
+            compiled,
+            config,
+            provider.describe_capabilities(),
+            streaming=streaming,
+        )
     elif config.provider == "elevenlabs":
         provider = ElevenLabsProvider(config.credential)
         capabilities = provider.describe_capabilities()
@@ -133,6 +150,7 @@ def render(
             compiled,
             config,
             capabilities,
+            streaming=streaming,
             dictionaries=translation.dictionary_locators,
             prepared_segments=translation.prepared_segments,
         )
@@ -147,36 +165,61 @@ def render(
             f"Unknown provider {config.provider!r}",
             context={"provider": config.provider},
         )
+    return _PreparedPipeline(config, compiled, provider, plan, warnings)
+
+
+def render(
+    *,
+    source: SourcePath | None = None,
+    yaml_text: str | None = None,
+    document: Mapping[str, Any] | None = None,
+    output_dir: SourcePath,
+    options: OptionsInput | None = None,
+    env_file: SourcePath | None = None,
+) -> RenderResult:
+    """Render exactly one supported source form to files in ``output_dir``."""
+
+    prepared = _prepare_pipeline(
+        source=source,
+        yaml_text=yaml_text,
+        document=document,
+        options=options,
+        env_file=env_file,
+        output_dir=output_dir,
+        streaming=False,
+    )
 
     preflight = preflight_render_outputs(
-        compiled,
-        plan,
+        prepared.compiled,
+        prepared.plan,
         output_dir,
-        output_format=config.output_format,
+        output_format=prepared.config.output_format,
     )
-    if config.manifest_enabled:
-        preflight_manifest_output(compiled.script_id, preflight.root)
+    if prepared.config.manifest_enabled:
+        preflight_manifest_output(prepared.compiled.script_id, preflight.root)
 
-    results = {request.id: provider.generate(request) for request in plan.requests}
+    results = {
+        request.id: prepared.provider.generate(request) for request in prepared.plan.requests
+    }
     outputs = write_render_outputs(
-        compiled,
-        plan,
+        prepared.compiled,
+        prepared.plan,
         results,
         preflight.root,
-        output_format=config.output_format,
-        normalize_loudness=config.normalize_loudness,
+        output_format=prepared.config.output_format,
+        normalize_loudness=prepared.config.normalize_loudness,
     )
     try:
         manifest = build_manifest(
-            compiled,
-            plan,
+            prepared.compiled,
+            prepared.plan,
             results,
             outputs,
-            config,
-            warnings=warnings,
+            prepared.config,
+            warnings=prepared.warnings,
         )
         manifest_path = (
-            write_manifest(manifest, preflight.root) if config.manifest_enabled else None
+            write_manifest(manifest, preflight.root) if prepared.config.manifest_enabled else None
         )
     except Exception:
         for path in outputs.files:
@@ -187,7 +230,7 @@ def render(
         root=preflight.root,
         manifest_path=manifest_path,
         manifest=manifest,
-        warnings=warnings,
+        warnings=prepared.warnings,
     )
 
 
@@ -235,9 +278,34 @@ def stream(
 ) -> Iterator[AudioChunk]:
     """Stream attributed chunks through the canonical pipeline."""
 
-    _validate_source_choice(source, yaml_text, document)
-    raise NotImplementedError("Streaming lands in checkpoint 3.1")
-    yield  # pragma: no cover - keeps the public return type an iterator
+    prepared = _prepare_pipeline(
+        source=source,
+        yaml_text=yaml_text,
+        document=document,
+        options=options,
+        env_file=env_file,
+        output_dir=None,
+        streaming=True,
+    )
+    return stream_render_plan(
+        prepared.plan,
+        prepared.provider,
+        output_format=prepared.config.output_format,
+        include_source_text=prepared.config.include_source_text,
+    )
+
+
+def _next_chunk(iterator: Iterator[AudioChunk]) -> tuple[bool, AudioChunk | None]:
+    try:
+        return False, next(iterator)
+    except StopIteration:
+        return True, None
+
+
+def _close_chunk_iterator(iterator: Iterator[AudioChunk]) -> None:
+    close = getattr(iterator, "close", None)
+    if callable(close):
+        close()
 
 
 async def astream(
@@ -250,6 +318,26 @@ async def astream(
 ) -> AsyncIterator[AudioChunk]:
     """Asynchronously stream attributed chunks through the canonical pipeline."""
 
-    _validate_source_choice(source, yaml_text, document)
-    raise NotImplementedError("Streaming lands in checkpoint 3.1")
-    yield  # pragma: no cover - keeps the public return type an async iterator
+    iterator = stream(
+        source=source,
+        yaml_text=yaml_text,
+        document=document,
+        options=options,
+        env_file=env_file,
+    )
+    pending: asyncio.Task[tuple[bool, AudioChunk | None]] | None = None
+    try:
+        while True:
+            pending = asyncio.create_task(asyncio.to_thread(_next_chunk, iterator))
+            done, chunk = await asyncio.shield(pending)
+            pending = None
+            if done:
+                return
+            assert chunk is not None
+            yield chunk
+    finally:
+        if pending is not None:
+            with suppress(asyncio.CancelledError, Exception):
+                await pending
+        with suppress(Exception):
+            await asyncio.to_thread(_close_chunk_iterator, iterator)

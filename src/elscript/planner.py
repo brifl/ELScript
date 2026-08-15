@@ -167,9 +167,7 @@ def _parts_for_segment(
     for index, text in enumerate(texts, start=1):
         provider_text = text
         if prepared is not None:
-            provider_text = " ".join(
-                value for value in (prepared.prefix, text) if value
-            )
+            provider_text = " ".join(value for value in (prepared.prefix, text) if value)
         parts.append(
             PlannedSegmentPart(
                 segment=segment,
@@ -191,16 +189,8 @@ def _request_limit(
     segment: SpeechSegment,
 ) -> int:
     chunking = _setting(segment, "chunking", {})
-    scene_max_chars = (
-        chunking.get("max_chars")
-        if isinstance(chunking, Mapping)
-        else None
-    )
-    limits = [
-        int(scene_max_chars)
-        if scene_max_chars is not None
-        else config.chunking.max_chars
-    ]
+    scene_max_chars = chunking.get("max_chars") if isinstance(chunking, Mapping) else None
+    limits = [int(scene_max_chars) if scene_max_chars is not None else config.chunking.max_chars]
     if endpoint.recommended_request_chars is not None:
         limits.append(endpoint.recommended_request_chars)
     if endpoint.hard_request_chars is not None:
@@ -291,10 +281,9 @@ def _capability_error(
             f"{kind.value} requests do not support a generation seed",
             context={"mode": kind.value, "segment_id": segment.id},
         )
-    if (
-        _setting(segment, "text_normalization", config.text_normalization) != "auto"
-        and not endpoint.supports(ProviderFeature.TEXT_NORMALIZATION)
-    ):
+    if _setting(
+        segment, "text_normalization", config.text_normalization
+    ) != "auto" and not endpoint.supports(ProviderFeature.TEXT_NORMALIZATION):
         return UnsupportedModelFeatureError(
             f"{kind.value} requests do not support text normalization control",
             context={"mode": kind.value, "segment_id": segment.id},
@@ -362,7 +351,11 @@ def _endpoint_for_run(
         assert endpoint is not None
         return kind, endpoint
 
-    multi_speaker = len(segments) > 1 and len({item.speaker for item in segments}) > 1
+    # Auto streaming favors independently attributable speech chunks. Explicit
+    # dialogue remains available and is normalized after request completion.
+    multi_speaker = (
+        not streaming and len(segments) > 1 and len({item.speaker for item in segments}) > 1
+    )
     preference = (
         (RequestKind.DIALOGUE, RequestKind.SPEECH)
         if multi_speaker
@@ -414,9 +407,7 @@ def _request_drafts(
                 kind=kind,
                 parts=(part,),
                 character_count=_character_count(part),
-                timestamps=bool(
-                    _setting(part.segment, "timestamps", config.timestamps)
-                ),
+                timestamps=bool(_setting(part.segment, "timestamps", config.timestamps)),
             )
             for segment_parts in parts_by_segment
             for part in segment_parts

@@ -197,6 +197,9 @@ class GenerationChunk:
     output_format: str
     request_id: str | None = None
     final: bool = False
+    alignment: CharacterAlignment | None = None
+    normalized_alignment: CharacterAlignment | None = None
+    voice_segments: tuple[VoiceSegmentMetadata, ...] = ()
     metadata: Mapping[str, Any] = field(default_factory=dict)
 
 

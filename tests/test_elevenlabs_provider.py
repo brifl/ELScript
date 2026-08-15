@@ -54,9 +54,7 @@ def _planned_request(
     api: dict[str, object] | None = None,
 ) -> ProviderRequest:
     script: list[dict[str, object]] = (
-        [{"MARA": "One"}, {"ORION": "Two"}]
-        if mode == "dialogue"
-        else [{"MARA": "One"}]
+        [{"MARA": "One"}, {"ORION": "Two"}] if mode == "dialogue" else [{"MARA": "One"}]
     )
     document = validate_document(
         load_document(
@@ -75,9 +73,7 @@ def _planned_request(
                     "MARA": {"voice_id": "mara/voice"},
                     "ORION": {"voice_id": "orion"},
                 },
-                "pronunciation": {
-                    "dictionaries": [{"id": "names", "version_id": "v7"}]
-                },
+                "pronunciation": {"dictionaries": [{"id": "names", "version_id": "v7"}]},
                 "scenes": [{"id": "scene", "script": script}],
             }
         )
@@ -316,4 +312,4 @@ def test_timestamp_stream_chunks_are_translated_without_live_network() -> None:
     assert [chunk.audio for chunk in chunks] == [b"first", b"second"]
     assert [chunk.final for chunk in chunks] == [False, True]
     assert "/v1/text-to-dialogue/stream/with-timestamps?" in transport.requests[0].url
-    assert chunks[0].metadata["voice_segments"][1].part_index == 1
+    assert chunks[0].voice_segments[1].part_index == 1

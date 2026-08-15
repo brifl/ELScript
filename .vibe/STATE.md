@@ -11,7 +11,7 @@
 
 - Stage: 4
 - Checkpoint: 4.1
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: DONE  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -26,12 +26,12 @@
 
 ## Acceptance (current checkpoint)
 
-- [ ] CI runs the full suite on CPython 3.11, 3.12, 3.13, and 3.14 on Linux, macOS, and Windows.
-- [ ] Checkout, Python setup, and artifact upload use supported Node 24-based action majors with no Node 20 deprecation annotations.
-- [ ] The build job creates, checks, installs, imports, and invokes the `elscript-audio` wheel on Python 3.14.
-- [ ] Project metadata names every tested Python minor without changing the `elscript` import or CLI command.
-- [ ] The workflow retains read-only contents permission and contains no package-index upload, tag, release, credential, or paid-provider step.
-- [ ] Local full-suite, Ruff, strict mypy, build, Twine, and distribution-content checks remain green.
+- [x] CI runs the full suite on CPython 3.11, 3.12, 3.13, and 3.14 on Linux, macOS, and Windows.
+- [x] Checkout, Python setup, and artifact upload use supported Node 24-based action majors with no Node 20 deprecation annotations.
+- [x] The build job creates, checks, installs, imports, and invokes the `elscript-audio` wheel on Python 3.14.
+- [x] Project metadata names every tested Python minor without changing the `elscript` import or CLI command.
+- [x] The workflow retains read-only contents permission and contains no package-index upload, tag, release, credential, or paid-provider step.
+- [x] Local full-suite, Ruff, strict mypy, build, Twine, and distribution-content checks remain green.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -62,6 +62,7 @@
 - 2026-08-14: Review PASS for checkpoint 3.4; package identity, docs, artifacts, isolated installation, deterministic examples, cache concurrency, and publication boundaries satisfy the release-readiness contract. The active plan is exhausted.
 - 2026-08-14: Designed Stage 4 from repository and live CI evidence: the six-job Python 3.11/3.12 matrix passes, but every job warns about deprecated Node 20 action runtimes and Python 3.13/3.14 are not exercised despite the open-ended `>=3.11` requirement.
 - 2026-08-14: Implemented checkpoint 4.1 in `afec37c`; CI now exercises CPython 3.11–3.14 on all three hosted operating systems with Node 24 actions, Python 3.14 artifact installation, synchronized classifiers, and an explicit no-release-authority assertion.
+- 2026-08-14: Review PASS for checkpoint 4.1 after exact hosted-job/artifact/annotation probes and focused policy tests; the active plan is exhausted with publication and paid-provider work still deferred.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -107,6 +108,8 @@
 - `afec37c` — current action majors, 12-job OS/Python test matrix, Python 3.14 artifact build, classifiers/support docs, and CI boundary assertions.
 - `.venv/bin/python -m pytest -q` — 211 passed; Ruff and strict mypy passed; isolated build, Twine, and distribution-content checks verified both `elscript_audio` artifacts.
 - GitHub Actions run `31858638239` — 13/13 checks passed across Linux/macOS/Windows and CPython 3.11–3.14 with zero annotations.
+- Adversarial CI probe — exact 12-combination matrix plus build job succeeded, the `elscript-audio-distributions` artifact is available, zero annotations were emitted, and 5 workflow/metadata contract tests passed.
+- Plan exhausted: current runtime/CI compatibility is complete; remaining backlog items require explicit publication or paid-call authorization.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

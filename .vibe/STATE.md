@@ -89,6 +89,7 @@
 - `.venv/bin/python -m pytest -q` — 210 passed; Ruff and strict `mypy src` passed.
 - `98509f2` — PyPI-safe absolute README links plus Twine validation in the release workflow; pushed to `origin/main`.
 - PyPI project lookup — `https://pypi.org/project/elscript/` is an unrelated `0.0.1` project owned by `EliotScript` (released 2022-01-23).
+- Candidate lookup — PyPI returned no project for `elscript-audio`, `elscript-tts`, or `elevenlabs-elscript` on 2026-08-14; names remain unreserved until successfully registered.
 - Next: operator must resolve ISSUE-305 before package names, install docs, artifacts, and release metadata can be signed off.
 
 ## Workflow state
@@ -108,7 +109,7 @@
   - Owner: human
   - Unblock Condition: Confirm control/transfer of the existing `elscript` PyPI project or select a unique distribution name; the `elscript` import package and CLI may remain unchanged if desired.
   - Evidence Needed: PyPI ownership confirmation or an operator-approved unique name followed by updated metadata/docs/artifacts and a passing build/install review.
-  - Notes: Do not publish or advertise `pip install elscript` until this is resolved; that name currently installs unrelated software.
+  - Notes: Do not publish or advertise `pip install elscript` until this is resolved; that name currently installs unrelated software. Recommended fallback: use distribution name `elscript-audio` while retaining the `elscript` import package and CLI command; PyPI currently returns no project for that candidate, but availability is not reserved.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->

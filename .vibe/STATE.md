@@ -10,27 +10,27 @@
 ## Current focus
 
 - Stage: 3
-- Checkpoint: 3.3
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Checkpoint: 3.4
+- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
-- Make failures phase-specific, secret-safe, and operationally actionable across untrusted input, provider faults, and partial writes.
+- Make the designed public contract installable, discoverable, reproducible, and ready for a first versioned release.
 
 ## Deliverables (current checkpoint)
 
-- Stable warning-code registry and phase-aware diagnostic formatting.
-- Atomic render/output cleanup behavior for cancellation and mid-pipeline failures.
-- Adversarial security and fault-injection coverage in `tests/test_security.py` and `tests/test_failures.py`.
-- `docs/troubleshooting.md` mapping common diagnostics to corrections.
+- README examples synchronized with tested public API/CLI behavior and supported ElevenLabs caveats.
+- `docs/` reference pages for ELScript 1.0 syntax, configuration, manifests, streaming, and provider capabilities.
+- Build metadata, license/package contents, changelog, and release checklist.
+- Documentation/example/package tests in `tests/test_docs_examples.py` and the build workflow.
 
 ## Acceptance (current checkpoint)
 
-- [ ] Each documented pipeline phase maps failures to a stable category/code with available source, YAML path, scene, character, segment, provider, and correction context.
-- [ ] Warnings cover only recoverable degradation; conflicts, unknown references, unsupported required intent, credentials, and voices remain errors.
-- [ ] Malicious YAML, aliases, logical IDs, filenames, and serialized metadata cannot instantiate objects, traverse paths, or leak credentials.
-- [ ] Provider failure or cancellation leaves no apparently complete manifest or corrupt final output and does not damage prior renders.
-- [ ] Troubleshooting guidance is verified against emitted codes and current CLI behavior.
+- [ ] Every README quick-start and comprehensive example is executed by tests against the canonical pipeline.
+- [ ] Public docs clearly separate portable semantics, provider escape hatches, supported degradation, and out-of-scope 1.0 features.
+- [ ] `sdist` and wheel build cleanly, contain required documentation/package assets, and install/import in a fresh environment.
+- [ ] Static/type/test checks pass from documented commands without repository-local undeclared state.
+- [ ] The release checklist includes the opt-in credentialed smoke and current provider-capability review without making paid calls part of default CI.
 
 ## Work log (current session)
 <!-- Append-only bullets for what changed and why. Prefer file/line references. -->
@@ -51,6 +51,7 @@
 - 2026-08-14: Resolved ISSUE-303 in `54d9d8a`; file and dialogue-stream failures now retain safe provider/request/scene/segment/character attribution through lower-level decode and assembly errors.
 - 2026-08-14: Re-review FAIL: unlike file generation, an unexpected streaming-adapter exception escapes as raw `RuntimeError` with its potentially secret-bearing message.
 - 2026-08-14: Resolved ISSUE-304 in `8723b92`; streaming now normalizes ordinary adapter failures to attributed, secret-safe `GENERATION_ERROR` while preserving cancellation semantics.
+- 2026-08-14: Review PASS for checkpoint 3.3 after 27 focused diagnostic/security/CLI tests, 206 full-suite tests, strict workflow validation, and adversarial file/stream failure probes; auto-advanced to checkpoint 3.4.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -78,7 +79,8 @@
 - `8723b92` — symmetric provider-failure normalization for streaming; pushed to `origin/main`.
 - `.venv/bin/python -m pytest tests/test_failures.py tests/test_streaming.py tests/test_security.py -q` — 28 passed, including unexpected stream fault redaction and cancellation propagation.
 - `.venv/bin/python -m pytest -q` — 206 passed; Ruff and strict `mypy src` passed.
-- Next: repeat checkpoint 3.3 adversarial review.
+- Checkpoint 3.3 review: 27 focused tests passed; corrupt audio and unexpected stream failures retain stable redacted attribution, cancellation propagates, and no code-review improvements remain.
+- Next: implement checkpoint 3.4 documentation and package release readiness.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

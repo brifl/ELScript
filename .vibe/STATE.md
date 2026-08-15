@@ -11,7 +11,7 @@
 
 - Stage: 3
 - Checkpoint: 3.4
-- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: BLOCKED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -54,6 +54,7 @@
 - 2026-08-14: Review PASS for checkpoint 3.3 after 27 focused diagnostic/security/CLI tests, 206 full-suite tests, strict workflow validation, and adversarial file/stream failure probes; auto-advanced to checkpoint 3.4.
 - 2026-08-14: Began checkpoint 3.4 by auditing README examples, distribution contents, build isolation, public metadata, documentation gaps, and cross-platform CI/release checks.
 - 2026-08-14: Implemented checkpoint 3.4 in `7a5662e`; public examples/reference docs, scoped package metadata, artifact verification, changelog/release guidance, and Linux/macOS/Windows CI now form one executable release surface.
+- 2026-08-14: Review FAIL/BLOCKED: the `elscript` distribution name is already owned on PyPI by an unrelated Eliot programming-language project, so the documented install command and publication target require an operator naming/ownership decision.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -86,7 +87,9 @@
 - `.venv/bin/python -m pytest tests/test_docs_examples.py tests/test_design_examples.py tests/test_public_contracts.py -q` — 20 passed; README quick start and both comprehensive layouts render through the fake provider.
 - `.venv/bin/python -m build && .venv/bin/python tools/check_dist.py dist` — verified `elscript-0.1.0a0-py3-none-any.whl` and `elscript-0.1.0a0.tar.gz`; fresh wheel install/import/CLI/render smoke passed outside the checkout.
 - `.venv/bin/python -m pytest -q` — 210 passed; Ruff and strict `mypy src` passed.
-- Next: independent review of checkpoint 3.4 release readiness and distribution contents.
+- `98509f2` — PyPI-safe absolute README links plus Twine validation in the release workflow; pushed to `origin/main`.
+- PyPI project lookup — `https://pypi.org/project/elscript/` is an unrelated `0.0.1` project owned by `EliotScript` (released 2022-01-23).
+- Next: operator must resolve ISSUE-305 before package names, install docs, artifacts, and release metadata can be signed off.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->
@@ -99,7 +102,13 @@
 ## Active issues
 <!-- Keep only active issues here. Move resolved items to HISTORY.md. -->
 
-- None.
+- [ ] ISSUE-305: Select an owned Python distribution name
+  - Impact: BLOCKER
+  - Status: DECISION_REQUIRED
+  - Owner: human
+  - Unblock Condition: Confirm control/transfer of the existing `elscript` PyPI project or select a unique distribution name; the `elscript` import package and CLI may remain unchanged if desired.
+  - Evidence Needed: PyPI ownership confirmation or an operator-approved unique name followed by updated metadata/docs/artifacts and a passing build/install review.
+  - Notes: Do not publish or advertise `pip install elscript` until this is resolved; that name currently installs unrelated software.
 
 ## Decisions
 <!-- Only decisions that matter for future work. -->

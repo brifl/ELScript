@@ -11,7 +11,7 @@
 
 - Stage: 4
 - Checkpoint: 4.1
-- Status: NOT_STARTED  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
+- Status: IN_REVIEW  <!-- one of: NOT_STARTED | IN_PROGRESS | IN_REVIEW | BLOCKED | DONE -->
 
 ## Objective (current checkpoint)
 
@@ -61,6 +61,7 @@
 - 2026-08-14: Full-suite verification exposed a reproducible cross-instance cache replacement race on the Windows-mounted workspace; resolved ISSUE-306 in `ce8d02d` with one shared in-process lock per cache root.
 - 2026-08-14: Review PASS for checkpoint 3.4; package identity, docs, artifacts, isolated installation, deterministic examples, cache concurrency, and publication boundaries satisfy the release-readiness contract. The active plan is exhausted.
 - 2026-08-14: Designed Stage 4 from repository and live CI evidence: the six-job Python 3.11/3.12 matrix passes, but every job warns about deprecated Node 20 action runtimes and Python 3.13/3.14 are not exercised despite the open-ended `>=3.11` requirement.
+- 2026-08-14: Implemented checkpoint 4.1 in `afec37c`; CI now exercises CPython 3.11–3.14 on all three hosted operating systems with Node 24 actions, Python 3.14 artifact installation, synchronized classifiers, and an explicit no-release-authority assertion.
 
 ## Evidence
 <!-- Paste command outputs, links to commits/PRs, screenshots, etc. -->
@@ -103,6 +104,9 @@
 - Adversarial distribution probe — fresh metadata maps `elscript` to `elscript-audio`, and no distribution named `elscript` is installed; 12 focused docs/cache tests passed.
 - `d5210cc` — final review clarifies the chosen local distribution identity and removes line-wrap brittleness from its documentation assertion.
 - Plan exhausted: all Stage 3 checkpoints are complete; PyPI publication and paid provider smoke remain explicitly deferred.
+- `afec37c` — current action majors, 12-job OS/Python test matrix, Python 3.14 artifact build, classifiers/support docs, and CI boundary assertions.
+- `.venv/bin/python -m pytest -q` — 211 passed; Ruff and strict mypy passed; isolated build, Twine, and distribution-content checks verified both `elscript_audio` artifacts.
+- GitHub Actions run `31858638239` — 13/13 checks passed across Linux/macOS/Windows and CPython 3.11–3.14 with zero annotations.
 
 ## Workflow state
 <!-- Dispatcher flags. Checked = active/needed. Cleared by the loop that handles each flag. -->

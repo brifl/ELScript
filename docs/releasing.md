@@ -33,6 +33,7 @@ python -m ruff check src tests
 python -m mypy src
 python -m pytest -q
 python -m build
+python -m twine check dist/*
 python tools/check_dist.py dist
 ```
 

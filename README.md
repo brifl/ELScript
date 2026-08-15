@@ -79,7 +79,8 @@ ELSCRIPT_ENABLE_LOGGING=true
 
 Credentials must be supplied through the process environment or a discovered/explicit
 `.env` file, never through script YAML or an `api` mapping. See
-[Configuration](docs/configuration.md) for discovery and precedence rules.
+[Configuration](https://github.com/brifl/ELScript/blob/main/docs/configuration.md) for
+discovery and precedence rules.
 
 ## Quick start
 
@@ -164,8 +165,8 @@ provider.
 The repository includes the complete **The Signal Below** example in both supported
 project layouts:
 
-- [single YAML file](tests/fixtures/signal_below.yaml)
-- [multi-file directory](tests/fixtures/signal_below/)
+- [single YAML file](https://github.com/brifl/ELScript/blob/main/tests/fixtures/signal_below.yaml)
+- [multi-file directory](https://github.com/brifl/ELScript/tree/main/tests/fixtures/signal_below)
 
 Documentation tests render both forms through the canonical pipeline and verify their
 audio and manifests are equivalent.
@@ -600,17 +601,18 @@ The CLI is a thin wrapper around the Python API and must not have separate scrip
 
 ## Documentation
 
-- [ELScript 1.0 syntax](docs/syntax.md)
-- [Configuration and security](docs/configuration.md)
-- [Manifest contract](docs/manifest.md)
-- [Streaming API](docs/streaming.md)
-- [Providers and capability behavior](docs/providers.md)
-- [Troubleshooting](docs/troubleshooting.md)
-- [Release checklist](docs/releasing.md)
+- [ELScript 1.0 syntax](https://github.com/brifl/ELScript/blob/main/docs/syntax.md)
+- [Configuration and security](https://github.com/brifl/ELScript/blob/main/docs/configuration.md)
+- [Manifest contract](https://github.com/brifl/ELScript/blob/main/docs/manifest.md)
+- [Streaming API](https://github.com/brifl/ELScript/blob/main/docs/streaming.md)
+- [Providers and capability behavior](https://github.com/brifl/ELScript/blob/main/docs/providers.md)
+- [Troubleshooting](https://github.com/brifl/ELScript/blob/main/docs/troubleshooting.md)
+- [Release checklist](https://github.com/brifl/ELScript/blob/main/docs/releasing.md)
 
 ## Design document
 
-See [`DESIGN.md`](DESIGN.md) for the authoritative contracts covering:
+See [`DESIGN.md`](https://github.com/brifl/ELScript/blob/main/DESIGN.md) for the
+authoritative contracts covering:
 
 - source loading and logical merge behavior
 - full ELScript schema

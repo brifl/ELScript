@@ -77,13 +77,22 @@ def test_comprehensive_single_and_project_examples_render_equivalently(
     ]
 
 
-def test_readme_relative_links_and_release_docs_exist() -> None:
+def test_readme_repository_links_and_release_docs_exist() -> None:
     text = README.read_text(encoding="utf-8")
     links = re.findall(r"\[[^]]+\]\(([^)]+)\)", text)
-    relative = [link for link in links if "://" not in link and not link.startswith("#")]
+    repository_prefixes = (
+        "https://github.com/brifl/ELScript/blob/main/",
+        "https://github.com/brifl/ELScript/tree/main/",
+    )
+    repository_paths = [
+        link.removeprefix(prefix)
+        for link in links
+        for prefix in repository_prefixes
+        if link.startswith(prefix)
+    ]
 
-    assert relative
-    assert all((ROOT / link).exists() for link in relative)
+    assert repository_paths
+    assert all((ROOT / path).exists() for path in repository_paths)
     assert "opt-in credentialed smoke" in (ROOT / "docs" / "releasing.md").read_text(
         encoding="utf-8"
     ).casefold()
